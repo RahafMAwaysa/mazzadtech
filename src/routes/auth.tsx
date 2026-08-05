@@ -21,11 +21,6 @@ export const Route = createFileRoute("/auth")({
 const ROLES = ["customer", "supplier", "delivery"] as const;
 type SignupRole = (typeof ROLES)[number];
 
-const HOME_FOR: Record<SignupRole, string> = {
-  customer: "/",
-  supplier: "/supplier",
-  delivery: "/delivery",
-};
 
 function AuthPage() {
   const { t } = useI18n();
