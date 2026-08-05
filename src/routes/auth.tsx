@@ -18,32 +18,62 @@ export const Route = createFileRoute("/auth")({
   component: AuthPage,
 });
 
+const ROLES = ["customer", "supplier", "delivery"] as const;
+type SignupRole = (typeof ROLES)[number];
+
+const HOME_FOR: Record<SignupRole, string> = {
+  customer: "/",
+  supplier: "/supplier",
+  delivery: "/delivery",
+};
+
 function AuthPage() {
   const { t } = useI18n();
   const navigate = useNavigate();
   const [mode, setMode] = useState<"in" | "up">("in");
-  const [role, setRole] = useState<"customer" | "supplier">("customer");
+  const [role, setRole] = useState<SignupRole>("customer");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [company, setCompany] = useState("");
+  const [phone, setPhone] = useState("");
   const [busy, setBusy] = useState(false);
+
+  const needsCompany = role === "supplier" || role === "delivery";
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setBusy(true);
     try {
       if (mode === "in") {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
-        navigate({ to: role === "supplier" ? "/supplier" : "/" });
+        // Route by the role actually stored for this account, not the form toggle.
+        const { data: roleRows } = await supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", data.user.id);
+        const stored = (roleRows ?? []).map((r) => r.role as string);
+        const target = stored.includes("admin")
+          ? "/admin"
+          : stored.includes("supplier")
+            ? "/supplier"
+            : stored.includes("delivery")
+              ? "/delivery"
+              : "/";
+        navigate({ to: target });
       } else {
         const { error } = await supabase.auth.signUp({
           email,
           password,
           options: {
             emailRedirectTo: window.location.origin,
-            data: { full_name: fullName, role, company_name: company },
+            data: {
+              full_name: fullName,
+              role,
+              company_name: needsCompany ? company : null,
+              phone: phone || null,
+            },
           },
         });
         if (error) throw error;
