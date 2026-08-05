@@ -10,6 +10,7 @@ import {
   ShieldCheck,
   LogOut,
   Languages,
+  Truck,
 } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { signOut, type Role } from "@/lib/session";
