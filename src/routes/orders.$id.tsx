@@ -51,11 +51,14 @@ function OrderDetail({ viewerRole }: { viewerRole: Role }) {
 
   const status = data?.order.status;
 
-  // Prototype: simulate delivery progress moving forward on its own.
+  // Supplier-side preparation advances automatically in this prototype.
+  // Everything from "received from supplier" onward is driven by the
+  // assigned delivery company, so the simulation stops at "verified".
+  const AUTO_UNTIL = ORDER_FLOW.indexOf("verified");
   useEffect(() => {
     if (!status) return;
     const index = ORDER_FLOW.indexOf(status as (typeof ORDER_FLOW)[number]);
-    if (index < 0 || index >= ORDER_FLOW.length - 1) return;
+    if (index < 0 || index >= AUTO_UNTIL) return;
     const next = ORDER_FLOW[index + 1];
     if (!next) return;
     const timer = setTimeout(async () => {
@@ -64,7 +67,7 @@ function OrderDetail({ viewerRole }: { viewerRole: Role }) {
       await qc.invalidateQueries({ queryKey: ["order", id] });
     }, 8000);
     return () => clearTimeout(timer);
-  }, [status, id, qc]);
+  }, [status, id, qc, AUTO_UNTIL]);
 
   if (isLoading || !data) {
     return (
@@ -99,7 +102,7 @@ function OrderDetail({ viewerRole }: { viewerRole: Role }) {
         </p>
         {supplier && (
           <p className="text-xs text-muted-foreground">
-            {supplier.company_name}
+            {supplierPublicName(viewerRole, supplier)}
             {supplier.city ? ` · ${supplier.city}` : ""}
           </p>
         )}
