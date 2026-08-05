@@ -1,51 +1,64 @@
 # MazzadTech Build Plan
 
 ## Goal
-Transform the remixed project into a production-grade reverse-auction electronics marketplace for the Palestinian market, serving four parties: Customers, Suppliers, Delivery Companies, and Platform Administration.
+Transform the remixed project into a production-grade reverse-auction electronics marketplace for the Palestinian market, serving four parties: Customers, Suppliers, Delivery Company, and Platform Administration.
 
 ## Guiding principles
 - Keep current functionality working while adding features.
 - Customers and Suppliers never see each other's real identity; only Admin sees real names, contacts, and company identity.
 - Build mobile-first, bilingual Arabic/English with full RTL/LTR support.
 - Wire flows end-to-end, not as isolated UI screens.
+- Keep operationally simple where possible — avoid over-engineering parts of the system that don't need it yet (e.g., delivery logistics).
 
 ## Build Sequence
 
 ### Phase 1: Features & flow (core product logic)
-1. Extend the role system to four parties: customer, supplier, delivery, admin.
-2. Refactor the AI Assistant into a multi-turn, situation-based conversation that produces a structured technical specification.
-3. Build the request lifecycle: draft → open → bidding → awarded → closed.
-4. Implement supplier bidding with match-ratio scoring and human-readable match reasons.
-5. Add customer offer comparison and acceptance flow.
-6. Wire order creation, payment hold, commission deduction, and supplier payout logic.
-7. Enforce identity anonymity across all customer/supplier touch points.
-8. Add delivery-company assignment, status/location updates, and proof-of-delivery.
-9. Add dispute filing and resolution flow.
-10. Add post-order ratings and supplier performance metrics.
-11. Build admin operations: verification, disputes, commissions, categories, users, reports.
+- Extend the role system to four parties: customer, supplier, delivery, admin.
+- Refactor the AI Assistant into a multi-turn, situation-based conversation (supporting text, voice, and image input) that produces a structured technical specification form with individual fields per spec (not a single paragraph).
+- Let the customer edit the generated form directly per field, or jump back into the AI conversation for a specific field to clarify/adjust it.
+- Capture an optional free-text customer priority note (e.g., "price matters most to me") to bias match-ratio ranking — no numeric weight sliders.
+- Build the request lifecycle: draft → open → bidding → awarded → closed, with no auction time limit (stays open until the customer manually selects a winning bid).
+- Allow the customer to edit or cancel their request as long as no bids have been submitted yet.
+- Implement supplier bidding with: price (validated to never exceed the customer's stated budget), warranty duration (preset dropdown), delivery/preparation time (preset dropdown), dynamic spec fields mirroring the customer's requested spec, a mandatory product video upload, and an optional free-text note.
+- Let suppliers see the count/value of competing bids on the same request, without revealing competitor identities.
+- Compute match-ratio scoring with human-readable match reasons AND a transparent list of unmet criteria per offer.
+- Add customer offer comparison and acceptance flow.
+- Wire order creation, electronic payment only (no COD in this phase), commission deduction from both customer and supplier sides, and instant automatic supplier payout to their wallet.
+- Enforce identity anonymity across all customer/supplier touch points (bids, chat, ratings, order history) — only Admin can see real identities.
+- Add a simple delivery flow: a single onboarded delivery-company account can view the list of orders assigned to them and manually update status (e.g., Received from Supplier → In Transit → Delivered). With small map icon when clicked opens live GPS map, ETA calculation for customer and admin just.
+- Require explicit customer confirmation ("Mark as Received") plus a mandatory 1–5 star rating with an optional comment to close out an order (this is the proof-of-delivery mechanism).
+- Add dispute filing (separate submission forms for customer/supplier) with AI-driven initial triage/categorization, admin review, optional admin-initiated chat with one or both parties, and admin resolution actions (refund, deduct from supplier balance, warn/suspend supplier).
+- Add post-order ratings (both directions, 1–5 stars + comment) and supplier performance metrics, always identity-anonymized.
+- Add AI-powered customer support with escalation to a real human agent.
+- Add external push notifications only (no in-app notification center) for: new matching auction to supplier, new offer to customer, admin verification warnings, wallet transfer confirmations.
+- Allow guest browsing of the public landing page; require account registration only when the customer starts an actual auction request.
+- Build admin operations: supplier verification queue (approve/reject/request-more-info with notes), disputes, commission control (per-category % + global default %), category management (add/edit/delete), user management (search by name/ID/phone/email, automatic smart segmentation like VIP/new/inactive for customers and trusted/new/low-rated for suppliers, AI-driven automatic discount engine with push notification + auto-applied discount, suspend/ban with logged reason, full user history), and an overview dashboard with drill-down analytics.
+- Add supplier ad-hoc reporting: text/chart/both, exportable to PDF, with an archive of past reports, configurable via manual filters (dropdowns/radio buttons) or AI-assisted natural-language report requests.
+- Support multiple saved payment cards (masked, PCI-style — last 4 digits only) and multiple saved delivery addresses in the customer profile, selectable or addable at checkout.
 
 ### Phase 2: Data & backend
-1. Extend `app_role` enum with `delivery`.
-2. Add `delivery_companies` table and role wiring in the signup trigger.
-3. Add `wallets` and `transactions` tables for customer balances, supplier payouts, and platform commission.
-4. Add `disputes` and `ratings` tables.
-5. Update RLS policies and GRANTs for every new table.
-6. Update `handle_new_user()` trigger to support delivery-company signups.
-7. Add server functions for requests, offers, orders, wallets, disputes, ratings, and admin reports.
+- Extend `app_role` enum with `delivery`.
+- Add a delivery_company table/entity and role wiring in the signup trigger (kept simple — a single company record for now, no complex multi-provider logic needed).
+- Add categories table with a per-category commission percentage (supplier side and customer side) and a global default percentage fallback.
+- Add wallets and transactions tables for supplier payouts and platform commission tracking (customer side does not need a wallet — payments are direct).
+- Add disputes and ratings tables.
+- Add reports table to archive supplier-generated ad-hoc reports.
+- Update RLS policies and GRANTs for every new table, enforcing identity-anonymity rules at the data layer (customers/suppliers query views that exclude each other's PII; only Admin role bypasses this).
+- Update `handle_new_user()` trigger to support delivery-company signups.
+- Add server functions for requests, offers, orders, wallets, disputes, ratings, categories, and admin reports.
 
 ### Phase 3: Design direction
-1. Apply blue & white palette with deep teal/blue gradient hero/banner sections.
-2. Use fully rounded UI elements and clean card-based layouts.
-3. Implement site-wide RTL (Arabic) / LTR (English) switching with direction-aware spacing.
-4. Add a hamburger navigation drawer in the header.
-5. Add a fixed bottom navigation bar with icons and labels for each role.
-6. Update AppShell, header, footer, cards, forms, and buttons.
+- Apply the blue & white color palette with deep teal/blue gradient hero/banner sections.
+- Apply rounded UI elements (buttons, cards) consistently across all screens.
+- Implement full bilingual support: Arabic (RTL, primary) and English (LTR), with a site-wide language toggle.
+- Apply contextual iconography as specified: chat bubble+heart, gavel, sparkles/match-ratio, green checkmark (verified), blue shield (secure payment), headset (support).
+- Ensure mobile-first responsive layouts across all four role dashboards.
 
-### Phase 4: Branding & copy
-1. Finalize the landing page with "Why MazzadTech" benefits, FAQ, and trust signals.
-2. Update footer with support email (backwalaa@gmail.com), phone (999), and copyright.
-3. Add full Arabic translations and copy.
-4. Polish SEO meta tags and OG tags for every route.
+### Phase 4: Branding and copy
+- Finalize the landing page hero copy, "How It Works" steps, and "Trust & Security" section using the exact content already defined in the spec.
+- Add the "Why MazzadTech" benefits section with dedicated cards for each party (Customer, Supplier, Delivery Company).
+- Add an FAQ section covering: what reverse auction means, payment security, identity privacy, cancellation policy, delivery tracking, and dispute/support process.
+- Add a footer with: brand logo + tagline, contact info (support email, phone/WhatsApp), quick links (About, FAQ), social media icons, and copyright line.
 
 ## First milestone (start here)
 Phase 1, Step 1: Role system + identity anonymity
