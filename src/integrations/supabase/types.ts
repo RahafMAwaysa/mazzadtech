@@ -412,6 +412,8 @@ export type Database = {
         | "shipping"
         | "delivered"
         | "cancelled"
+        | "received_from_supplier"
+        | "in_transit"
       request_status: "draft" | "open" | "awarded" | "closed"
     }
     CompositeTypes: {
@@ -549,6 +551,8 @@ export const Constants = {
         "shipping",
         "delivered",
         "cancelled",
+        "received_from_supplier",
+        "in_transit",
       ],
       request_status: ["draft", "open", "awarded", "closed"],
     },
