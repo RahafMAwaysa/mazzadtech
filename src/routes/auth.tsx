@@ -115,19 +115,23 @@ function AuthPage() {
             {mode === "up" && (
               <>
                 <Field label={t("iAmA")}>
-                  <div className="grid grid-cols-2 gap-2">
-                    {(["customer", "supplier"] as const).map((r) => (
+                  <div className="grid grid-cols-3 gap-2">
+                    {ROLES.map((r) => (
                       <button
                         key={r}
                         type="button"
                         onClick={() => setRole(r)}
-                        className={`h-11 rounded-xl border text-sm font-medium transition-colors ${
+                        className={`h-11 rounded-xl border px-1 text-xs font-medium transition-colors ${
                           role === r
                             ? "border-primary bg-primary-soft text-primary"
                             : "border-border bg-card text-muted-foreground"
                         }`}
                       >
-                        {r === "customer" ? t("customer") : t("supplier")}
+                        {r === "customer"
+                          ? t("customer")
+                          : r === "supplier"
+                            ? t("supplier")
+                            : t("deliveryCompany")}
                       </button>
                     ))}
                   </div>
@@ -135,11 +139,19 @@ function AuthPage() {
                 <Field label={t("fullName")}>
                   <Input value={fullName} onChange={(e) => setFullName(e.target.value)} required />
                 </Field>
-                {role === "supplier" && (
-                  <Field label={t("companyName")}>
+                {needsCompany && (
+                  <Field label={role === "delivery" ? t("deliveryCompanyName") : t("companyName")}>
                     <Input value={company} onChange={(e) => setCompany(e.target.value)} required />
                   </Field>
                 )}
+                <Field label={t("phone")}>
+                  <Input
+                    type="tel"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    autoComplete="tel"
+                  />
+                </Field>
               </>
             )}
             <Field label={t("email")}>
