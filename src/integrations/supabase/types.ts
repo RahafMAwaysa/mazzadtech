@@ -194,6 +194,7 @@ export type Database = {
           commission: number
           created_at: string
           customer_id: string
+          delivery_company_id: string | null
           id: string
           offer_id: string
           order_number: string
@@ -208,6 +209,7 @@ export type Database = {
           commission?: number
           created_at?: string
           customer_id: string
+          delivery_company_id?: string | null
           id?: string
           offer_id: string
           order_number?: string
@@ -222,6 +224,7 @@ export type Database = {
           commission?: number
           created_at?: string
           customer_id?: string
+          delivery_company_id?: string | null
           id?: string
           offer_id?: string
           order_number?: string
@@ -232,6 +235,13 @@ export type Database = {
           supplier_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "orders_delivery_company_id_fkey"
+            columns: ["delivery_company_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_companies"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "orders_offer_id_fkey"
             columns: ["offer_id"]
@@ -399,6 +409,10 @@ export type Database = {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
         }
+        Returns: boolean
+      }
+      is_order_courier: {
+        Args: { _order_id: string; _user_id: string }
         Returns: boolean
       }
     }
