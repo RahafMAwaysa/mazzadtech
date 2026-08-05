@@ -49,6 +49,45 @@ export type Database = {
           },
         ]
       }
+      delivery_companies: {
+        Row: {
+          active: boolean
+          alias: string
+          city: string | null
+          company_name: string
+          completed_deliveries: number
+          created_at: string
+          id: string
+          phone: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          active?: boolean
+          alias?: string
+          city?: string | null
+          company_name: string
+          completed_deliveries?: number
+          created_at?: string
+          id?: string
+          phone?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          active?: boolean
+          alias?: string
+          city?: string | null
+          company_name?: string
+          completed_deliveries?: number
+          created_at?: string
+          id?: string
+          phone?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       offers: {
         Row: {
           benefits: string | null
