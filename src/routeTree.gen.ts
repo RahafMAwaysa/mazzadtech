@@ -17,6 +17,8 @@ import { Route as AdminOrdersRouteImport } from './routes/admin.orders'
 import { Route as AdminSuppliersRouteImport } from './routes/admin.suppliers'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
 import { Route as CheckoutOfferIdRouteImport } from './routes/checkout.$offerId'
+import { Route as DeliveryIndexRouteImport } from './routes/delivery.index'
+import { Route as DeliveryProfileRouteImport } from './routes/delivery.profile'
 import { Route as OrdersIndexRouteImport } from './routes/orders.index'
 import { Route as OrdersIdRouteImport } from './routes/orders.$id'
 import { Route as RequestsIndexRouteImport } from './routes/requests.index'
@@ -66,6 +68,16 @@ const ApiChatRoute = ApiChatRouteImport.update({
 const CheckoutOfferIdRoute = CheckoutOfferIdRouteImport.update({
   id: '/checkout/$offerId',
   path: '/checkout/$offerId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DeliveryIndexRoute = DeliveryIndexRouteImport.update({
+  id: '/delivery/',
+  path: '/delivery/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DeliveryProfileRoute = DeliveryProfileRouteImport.update({
+  id: '/delivery/profile',
+  path: '/delivery/profile',
   getParentRoute: () => rootRouteImport,
 } as any)
 const OrdersIndexRoute = OrdersIndexRouteImport.update({
@@ -127,6 +139,7 @@ export interface FileRoutesByFullPath {
   '/admin/suppliers': typeof AdminSuppliersRoute
   '/api/chat': typeof ApiChatRoute
   '/checkout/$offerId': typeof CheckoutOfferIdRoute
+  '/delivery/profile': typeof DeliveryProfileRoute
   '/orders/$id': typeof OrdersIdRoute
   '/requests/$id': typeof RequestsIdRoute
   '/supplier/auctions': typeof SupplierAuctionsRoute
@@ -134,6 +147,7 @@ export interface FileRoutesByFullPath {
   '/supplier/orders': typeof SupplierOrdersRoute
   '/supplier/profile': typeof SupplierProfileRoute
   '/admin/': typeof AdminIndexRoute
+  '/delivery/': typeof DeliveryIndexRoute
   '/orders/': typeof OrdersIndexRoute
   '/requests/': typeof RequestsIndexRoute
   '/supplier/': typeof SupplierIndexRoute
@@ -147,6 +161,7 @@ export interface FileRoutesByTo {
   '/admin/suppliers': typeof AdminSuppliersRoute
   '/api/chat': typeof ApiChatRoute
   '/checkout/$offerId': typeof CheckoutOfferIdRoute
+  '/delivery/profile': typeof DeliveryProfileRoute
   '/orders/$id': typeof OrdersIdRoute
   '/requests/$id': typeof RequestsIdRoute
   '/supplier/auctions': typeof SupplierAuctionsRoute
@@ -154,6 +169,7 @@ export interface FileRoutesByTo {
   '/supplier/orders': typeof SupplierOrdersRoute
   '/supplier/profile': typeof SupplierProfileRoute
   '/admin': typeof AdminIndexRoute
+  '/delivery': typeof DeliveryIndexRoute
   '/orders': typeof OrdersIndexRoute
   '/requests': typeof RequestsIndexRoute
   '/supplier': typeof SupplierIndexRoute
@@ -168,6 +184,7 @@ export interface FileRoutesById {
   '/admin/suppliers': typeof AdminSuppliersRoute
   '/api/chat': typeof ApiChatRoute
   '/checkout/$offerId': typeof CheckoutOfferIdRoute
+  '/delivery/profile': typeof DeliveryProfileRoute
   '/orders/$id': typeof OrdersIdRoute
   '/requests/$id': typeof RequestsIdRoute
   '/supplier/auctions': typeof SupplierAuctionsRoute
@@ -175,6 +192,7 @@ export interface FileRoutesById {
   '/supplier/orders': typeof SupplierOrdersRoute
   '/supplier/profile': typeof SupplierProfileRoute
   '/admin/': typeof AdminIndexRoute
+  '/delivery/': typeof DeliveryIndexRoute
   '/orders/': typeof OrdersIndexRoute
   '/requests/': typeof RequestsIndexRoute
   '/supplier/': typeof SupplierIndexRoute
@@ -190,6 +208,7 @@ export interface FileRouteTypes {
     | '/admin/suppliers'
     | '/api/chat'
     | '/checkout/$offerId'
+    | '/delivery/profile'
     | '/orders/$id'
     | '/requests/$id'
     | '/supplier/auctions'
@@ -197,6 +216,7 @@ export interface FileRouteTypes {
     | '/supplier/orders'
     | '/supplier/profile'
     | '/admin/'
+    | '/delivery/'
     | '/orders/'
     | '/requests/'
     | '/supplier/'
@@ -210,6 +230,7 @@ export interface FileRouteTypes {
     | '/admin/suppliers'
     | '/api/chat'
     | '/checkout/$offerId'
+    | '/delivery/profile'
     | '/orders/$id'
     | '/requests/$id'
     | '/supplier/auctions'
@@ -217,6 +238,7 @@ export interface FileRouteTypes {
     | '/supplier/orders'
     | '/supplier/profile'
     | '/admin'
+    | '/delivery'
     | '/orders'
     | '/requests'
     | '/supplier'
@@ -230,6 +252,7 @@ export interface FileRouteTypes {
     | '/admin/suppliers'
     | '/api/chat'
     | '/checkout/$offerId'
+    | '/delivery/profile'
     | '/orders/$id'
     | '/requests/$id'
     | '/supplier/auctions'
@@ -237,6 +260,7 @@ export interface FileRouteTypes {
     | '/supplier/orders'
     | '/supplier/profile'
     | '/admin/'
+    | '/delivery/'
     | '/orders/'
     | '/requests/'
     | '/supplier/'
@@ -251,6 +275,7 @@ export interface RootRouteChildren {
   AdminSuppliersRoute: typeof AdminSuppliersRoute
   ApiChatRoute: typeof ApiChatRoute
   CheckoutOfferIdRoute: typeof CheckoutOfferIdRoute
+  DeliveryProfileRoute: typeof DeliveryProfileRoute
   OrdersIdRoute: typeof OrdersIdRoute
   RequestsIdRoute: typeof RequestsIdRoute
   SupplierAuctionsRoute: typeof SupplierAuctionsRoute
@@ -258,6 +283,7 @@ export interface RootRouteChildren {
   SupplierOrdersRoute: typeof SupplierOrdersRoute
   SupplierProfileRoute: typeof SupplierProfileRoute
   AdminIndexRoute: typeof AdminIndexRoute
+  DeliveryIndexRoute: typeof DeliveryIndexRoute
   OrdersIndexRoute: typeof OrdersIndexRoute
   RequestsIndexRoute: typeof RequestsIndexRoute
   SupplierIndexRoute: typeof SupplierIndexRoute
@@ -320,6 +346,20 @@ declare module '@tanstack/react-router' {
       path: '/checkout/$offerId'
       fullPath: '/checkout/$offerId'
       preLoaderRoute: typeof CheckoutOfferIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/delivery/': {
+      id: '/delivery/'
+      path: '/delivery'
+      fullPath: '/delivery/'
+      preLoaderRoute: typeof DeliveryIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/delivery/profile': {
+      id: '/delivery/profile'
+      path: '/delivery/profile'
+      fullPath: '/delivery/profile'
+      preLoaderRoute: typeof DeliveryProfileRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/orders/': {
@@ -403,6 +443,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminSuppliersRoute: AdminSuppliersRoute,
   ApiChatRoute: ApiChatRoute,
   CheckoutOfferIdRoute: CheckoutOfferIdRoute,
+  DeliveryProfileRoute: DeliveryProfileRoute,
   OrdersIdRoute: OrdersIdRoute,
   RequestsIdRoute: RequestsIdRoute,
   SupplierAuctionsRoute: SupplierAuctionsRoute,
@@ -410,6 +451,7 @@ const rootRouteChildren: RootRouteChildren = {
   SupplierOrdersRoute: SupplierOrdersRoute,
   SupplierProfileRoute: SupplierProfileRoute,
   AdminIndexRoute: AdminIndexRoute,
+  DeliveryIndexRoute: DeliveryIndexRoute,
   OrdersIndexRoute: OrdersIndexRoute,
   RequestsIndexRoute: RequestsIndexRoute,
   SupplierIndexRoute: SupplierIndexRoute,
