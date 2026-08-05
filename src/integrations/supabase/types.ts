@@ -49,6 +49,45 @@ export type Database = {
           },
         ]
       }
+      delivery_companies: {
+        Row: {
+          active: boolean
+          alias: string
+          city: string | null
+          company_name: string
+          completed_deliveries: number
+          created_at: string
+          id: string
+          phone: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          active?: boolean
+          alias?: string
+          city?: string | null
+          company_name: string
+          completed_deliveries?: number
+          created_at?: string
+          id?: string
+          phone?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          active?: boolean
+          alias?: string
+          city?: string | null
+          company_name?: string
+          completed_deliveries?: number
+          created_at?: string
+          id?: string
+          phone?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       offers: {
         Row: {
           benefits: string | null
@@ -155,6 +194,7 @@ export type Database = {
           commission: number
           created_at: string
           customer_id: string
+          delivery_company_id: string | null
           id: string
           offer_id: string
           order_number: string
@@ -169,6 +209,7 @@ export type Database = {
           commission?: number
           created_at?: string
           customer_id: string
+          delivery_company_id?: string | null
           id?: string
           offer_id: string
           order_number?: string
@@ -183,6 +224,7 @@ export type Database = {
           commission?: number
           created_at?: string
           customer_id?: string
+          delivery_company_id?: string | null
           id?: string
           offer_id?: string
           order_number?: string
@@ -193,6 +235,13 @@ export type Database = {
           supplier_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "orders_delivery_company_id_fkey"
+            columns: ["delivery_company_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_companies"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "orders_offer_id_fkey"
             columns: ["offer_id"]
@@ -362,9 +411,13 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_order_courier: {
+        Args: { _order_id: string; _user_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
-      app_role: "customer" | "supplier" | "admin"
+      app_role: "customer" | "supplier" | "admin" | "delivery"
       offer_status: "submitted" | "accepted" | "rejected"
       order_status:
         | "confirmed"
@@ -373,6 +426,8 @@ export type Database = {
         | "shipping"
         | "delivered"
         | "cancelled"
+        | "received_from_supplier"
+        | "in_transit"
       request_status: "draft" | "open" | "awarded" | "closed"
     }
     CompositeTypes: {
@@ -501,7 +556,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["customer", "supplier", "admin"],
+      app_role: ["customer", "supplier", "admin", "delivery"],
       offer_status: ["submitted", "accepted", "rejected"],
       order_status: [
         "confirmed",
@@ -510,6 +565,8 @@ export const Constants = {
         "shipping",
         "delivered",
         "cancelled",
+        "received_from_supplier",
+        "in_transit",
       ],
       request_status: ["draft", "open", "awarded", "closed"],
     },

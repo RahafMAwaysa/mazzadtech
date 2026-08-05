@@ -9,6 +9,8 @@ import { useI18n } from "@/lib/i18n";
 import { supabase } from "@/integrations/supabase/client";
 import { ORDER_FLOW, statusKey } from "@/lib/order-status";
 import { estimatedDelivery } from "@/lib/auction";
+import { supplierPublicName } from "@/lib/identity";
+import type { Role } from "@/lib/session";
 
 export const Route = createFileRoute("/orders/$id")({
   head: () => ({
@@ -21,10 +23,10 @@ export const Route = createFileRoute("/orders/$id")({
       { name: "twitter:card", content: "summary" },
     ],
   }),
-  component: () => <Guard>{() => <OrderDetail />}</Guard>,
+  component: () => <Guard>{(ctx) => <OrderDetail viewerRole={ctx.role} />}</Guard>,
 });
 
-function OrderDetail() {
+function OrderDetail({ viewerRole }: { viewerRole: Role }) {
   const { id } = Route.useParams();
   const { t, lang } = useI18n();
   const qc = useQueryClient();
@@ -40,7 +42,7 @@ function OrderDetail() {
       if (error) throw error;
       const { data: supplier } = await supabase
         .from("supplier_profiles")
-        .select("company_name, city, rating")
+        .select("alias, company_name, city, rating, user_id")
         .eq("user_id", data.supplier_id)
         .maybeSingle();
       return { order: data, supplier };
@@ -49,11 +51,14 @@ function OrderDetail() {
 
   const status = data?.order.status;
 
-  // Prototype: simulate delivery progress moving forward on its own.
+  // Supplier-side preparation advances automatically in this prototype.
+  // Everything from "received from supplier" onward is driven by the
+  // assigned delivery company, so the simulation stops at "verified".
+  const AUTO_UNTIL = ORDER_FLOW.indexOf("verified");
   useEffect(() => {
     if (!status) return;
     const index = ORDER_FLOW.indexOf(status as (typeof ORDER_FLOW)[number]);
-    if (index < 0 || index >= ORDER_FLOW.length - 1) return;
+    if (index < 0 || index >= AUTO_UNTIL) return;
     const next = ORDER_FLOW[index + 1];
     if (!next) return;
     const timer = setTimeout(async () => {
@@ -62,7 +67,7 @@ function OrderDetail() {
       await qc.invalidateQueries({ queryKey: ["order", id] });
     }, 8000);
     return () => clearTimeout(timer);
-  }, [status, id, qc]);
+  }, [status, id, qc, AUTO_UNTIL]);
 
   if (isLoading || !data) {
     return (
@@ -97,7 +102,7 @@ function OrderDetail() {
         </p>
         {supplier && (
           <p className="text-xs text-muted-foreground">
-            {supplier.company_name}
+            {supplierPublicName(viewerRole, supplier)}
             {supplier.city ? ` · ${supplier.city}` : ""}
           </p>
         )}

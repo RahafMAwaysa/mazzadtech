@@ -18,32 +18,57 @@ export const Route = createFileRoute("/auth")({
   component: AuthPage,
 });
 
+const ROLES = ["customer", "supplier", "delivery"] as const;
+type SignupRole = (typeof ROLES)[number];
+
+
 function AuthPage() {
   const { t } = useI18n();
   const navigate = useNavigate();
   const [mode, setMode] = useState<"in" | "up">("in");
-  const [role, setRole] = useState<"customer" | "supplier">("customer");
+  const [role, setRole] = useState<SignupRole>("customer");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [company, setCompany] = useState("");
+  const [phone, setPhone] = useState("");
   const [busy, setBusy] = useState(false);
+
+  const needsCompany = role === "supplier" || role === "delivery";
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setBusy(true);
     try {
       if (mode === "in") {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
-        navigate({ to: role === "supplier" ? "/supplier" : "/" });
+        // Route by the role actually stored for this account, not the form toggle.
+        const { data: roleRows } = await supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", data.user.id);
+        const stored = (roleRows ?? []).map((r) => r.role as string);
+        const target = stored.includes("admin")
+          ? "/admin"
+          : stored.includes("supplier")
+            ? "/supplier"
+            : stored.includes("delivery")
+              ? "/delivery"
+              : "/";
+        navigate({ to: target });
       } else {
         const { error } = await supabase.auth.signUp({
           email,
           password,
           options: {
             emailRedirectTo: window.location.origin,
-            data: { full_name: fullName, role, company_name: company },
+            data: {
+              full_name: fullName,
+              role,
+              company_name: needsCompany ? company : null,
+              phone: phone || null,
+            },
           },
         });
         if (error) throw error;
@@ -85,19 +110,23 @@ function AuthPage() {
             {mode === "up" && (
               <>
                 <Field label={t("iAmA")}>
-                  <div className="grid grid-cols-2 gap-2">
-                    {(["customer", "supplier"] as const).map((r) => (
+                  <div className="grid grid-cols-3 gap-2">
+                    {ROLES.map((r) => (
                       <button
                         key={r}
                         type="button"
                         onClick={() => setRole(r)}
-                        className={`h-11 rounded-xl border text-sm font-medium transition-colors ${
+                        className={`h-11 rounded-xl border px-1 text-xs font-medium transition-colors ${
                           role === r
                             ? "border-primary bg-primary-soft text-primary"
                             : "border-border bg-card text-muted-foreground"
                         }`}
                       >
-                        {r === "customer" ? t("customer") : t("supplier")}
+                        {r === "customer"
+                          ? t("customer")
+                          : r === "supplier"
+                            ? t("supplier")
+                            : t("deliveryCompany")}
                       </button>
                     ))}
                   </div>
@@ -105,11 +134,19 @@ function AuthPage() {
                 <Field label={t("fullName")}>
                   <Input value={fullName} onChange={(e) => setFullName(e.target.value)} required />
                 </Field>
-                {role === "supplier" && (
-                  <Field label={t("companyName")}>
+                {needsCompany && (
+                  <Field label={role === "delivery" ? t("deliveryCompanyName") : t("companyName")}>
                     <Input value={company} onChange={(e) => setCompany(e.target.value)} required />
                   </Field>
                 )}
+                <Field label={t("phone")}>
+                  <Input
+                    type="tel"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    autoComplete="tel"
+                  />
+                </Field>
               </>
             )}
             <Field label={t("email")}>

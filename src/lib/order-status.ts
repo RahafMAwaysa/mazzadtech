@@ -1,13 +1,39 @@
-export const ORDER_FLOW = ["confirmed", "preparing", "verified", "shipping", "delivered"] as const;
+export const ORDER_FLOW = [
+  "confirmed",
+  "preparing",
+  "verified",
+  "received_from_supplier",
+  "in_transit",
+  "shipping",
+  "delivered",
+] as const;
 
 export type OrderStatus = (typeof ORDER_FLOW)[number] | "cancelled";
 
-export function statusKey(status: string) {
-  return (status === "verified" ? "verifiedStep" : status) as
-    | "confirmed"
-    | "preparing"
-    | "verifiedStep"
-    | "shipping"
-    | "delivered"
-    | "cancelled";
+/** Statuses a delivery company may set, in order. */
+export const COURIER_FLOW = ["received_from_supplier", "in_transit", "delivered"] as const;
+
+export type StatusKey =
+  | "confirmed"
+  | "preparing"
+  | "verifiedStep"
+  | "receivedFromSupplier"
+  | "inTransit"
+  | "shipping"
+  | "delivered"
+  | "cancelled";
+
+const MAP: Record<string, StatusKey> = {
+  confirmed: "confirmed",
+  preparing: "preparing",
+  verified: "verifiedStep",
+  received_from_supplier: "receivedFromSupplier",
+  in_transit: "inTransit",
+  shipping: "shipping",
+  delivered: "delivered",
+  cancelled: "cancelled",
+};
+
+export function statusKey(status: string): StatusKey {
+  return MAP[status] ?? "confirmed";
 }

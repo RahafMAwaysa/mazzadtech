@@ -10,6 +10,7 @@ import {
   ShieldCheck,
   LogOut,
   Languages,
+  Truck,
 } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { signOut, type Role } from "@/lib/session";
@@ -39,18 +40,23 @@ export function AppShell({
           { to: "/supplier/orders", label: t("orders"), icon: <Package className="size-5" /> },
           { to: "/supplier/profile", label: t("profile"), icon: <ShieldCheck className="size-5" /> },
         ]
-      : role === "admin"
+      : role === "delivery"
         ? [
-            { to: "/admin", label: t("dashboard"), icon: <LayoutDashboard className="size-5" /> },
-            { to: "/admin/suppliers", label: t("suppliers"), icon: <ShieldCheck className="size-5" /> },
-            { to: "/admin/orders", label: t("orders"), icon: <Package className="size-5" /> },
+            { to: "/delivery", label: t("deliveries"), icon: <Truck className="size-5" /> },
+            { to: "/delivery/profile", label: t("profile"), icon: <ShieldCheck className="size-5" /> },
           ]
-        : [
-            { to: "/", label: t("home"), icon: <Home className="size-5" /> },
-            { to: "/assistant", label: t("assistant"), icon: <MessagesSquare className="size-5" /> },
-            { to: "/requests", label: t("requests"), icon: <ClipboardList className="size-5" /> },
-            { to: "/orders", label: t("orders"), icon: <Package className="size-5" /> },
-          ];
+        : role === "admin"
+          ? [
+              { to: "/admin", label: t("dashboard"), icon: <LayoutDashboard className="size-5" /> },
+              { to: "/admin/suppliers", label: t("suppliers"), icon: <ShieldCheck className="size-5" /> },
+              { to: "/admin/orders", label: t("orders"), icon: <Package className="size-5" /> },
+            ]
+          : [
+              { to: "/", label: t("home"), icon: <Home className="size-5" /> },
+              { to: "/assistant", label: t("assistant"), icon: <MessagesSquare className="size-5" /> },
+              { to: "/requests", label: t("requests"), icon: <ClipboardList className="size-5" /> },
+              { to: "/orders", label: t("orders"), icon: <Package className="size-5" /> },
+            ];
 
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-lg flex-col bg-background">
@@ -95,7 +101,10 @@ export function AppShell({
 
       {signedIn && (
         <nav className="fixed bottom-0 z-20 w-full max-w-lg border-t border-border bg-card/95 backdrop-blur">
-          <ul className="grid grid-cols-4">
+          <ul
+            className="grid"
+            style={{ gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))` }}
+          >
             {items.map((item) => {
               const active =
                 item.to === "/" ? pathname === "/" : pathname.startsWith(item.to);
