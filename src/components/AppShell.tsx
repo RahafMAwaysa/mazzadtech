@@ -39,18 +39,23 @@ export function AppShell({
           { to: "/supplier/orders", label: t("orders"), icon: <Package className="size-5" /> },
           { to: "/supplier/profile", label: t("profile"), icon: <ShieldCheck className="size-5" /> },
         ]
-      : role === "admin"
+      : role === "delivery"
         ? [
-            { to: "/admin", label: t("dashboard"), icon: <LayoutDashboard className="size-5" /> },
-            { to: "/admin/suppliers", label: t("suppliers"), icon: <ShieldCheck className="size-5" /> },
-            { to: "/admin/orders", label: t("orders"), icon: <Package className="size-5" /> },
+            { to: "/delivery", label: t("deliveries"), icon: <Truck className="size-5" /> },
+            { to: "/delivery/profile", label: t("profile"), icon: <ShieldCheck className="size-5" /> },
           ]
-        : [
-            { to: "/", label: t("home"), icon: <Home className="size-5" /> },
-            { to: "/assistant", label: t("assistant"), icon: <MessagesSquare className="size-5" /> },
-            { to: "/requests", label: t("requests"), icon: <ClipboardList className="size-5" /> },
-            { to: "/orders", label: t("orders"), icon: <Package className="size-5" /> },
-          ];
+        : role === "admin"
+          ? [
+              { to: "/admin", label: t("dashboard"), icon: <LayoutDashboard className="size-5" /> },
+              { to: "/admin/suppliers", label: t("suppliers"), icon: <ShieldCheck className="size-5" /> },
+              { to: "/admin/orders", label: t("orders"), icon: <Package className="size-5" /> },
+            ]
+          : [
+              { to: "/", label: t("home"), icon: <Home className="size-5" /> },
+              { to: "/assistant", label: t("assistant"), icon: <MessagesSquare className="size-5" /> },
+              { to: "/requests", label: t("requests"), icon: <ClipboardList className="size-5" /> },
+              { to: "/orders", label: t("orders"), icon: <Package className="size-5" /> },
+            ];
 
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-lg flex-col bg-background">
