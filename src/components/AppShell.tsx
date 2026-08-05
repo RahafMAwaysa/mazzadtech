@@ -101,7 +101,10 @@ export function AppShell({
 
       {signedIn && (
         <nav className="fixed bottom-0 z-20 w-full max-w-lg border-t border-border bg-card/95 backdrop-blur">
-          <ul className="grid grid-cols-4">
+          <ul
+            className="grid"
+            style={{ gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))` }}
+          >
             {items.map((item) => {
               const active =
                 item.to === "/" ? pathname === "/" : pathname.startsWith(item.to);
