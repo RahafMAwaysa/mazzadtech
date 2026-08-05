@@ -43,6 +43,8 @@ function OrderDetail({ viewerRole }: { viewerRole: Role }) {
       const { data: supplier } = await supabase
         .from("supplier_profiles")
         .select("alias, company_name, city, rating, user_id")
+        .eq("user_id", data.supplier_id)
+        .maybeSingle();
       return { order: data, supplier };
     },
   });
