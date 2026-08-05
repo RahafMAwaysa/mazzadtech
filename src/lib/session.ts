@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 
-export type Role = "customer" | "supplier" | "admin";
+export type Role = "customer" | "supplier" | "delivery" | "admin";
 
 export type SessionState = {
   loading: boolean;
@@ -37,7 +37,9 @@ export function useSession(): SessionState {
         ? "admin"
         : roles.includes("supplier")
           ? "supplier"
-          : "customer";
+          : roles.includes("delivery")
+            ? "delivery"
+            : "customer";
       setState({ loading: false, session, user: session.user, role });
     };
 
