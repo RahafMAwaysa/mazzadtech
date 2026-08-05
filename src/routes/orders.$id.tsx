@@ -9,6 +9,8 @@ import { useI18n } from "@/lib/i18n";
 import { supabase } from "@/integrations/supabase/client";
 import { ORDER_FLOW, statusKey } from "@/lib/order-status";
 import { estimatedDelivery } from "@/lib/auction";
+import { supplierPublicName } from "@/lib/identity";
+import type { Role } from "@/lib/session";
 
 export const Route = createFileRoute("/orders/$id")({
   head: () => ({
@@ -21,10 +23,10 @@ export const Route = createFileRoute("/orders/$id")({
       { name: "twitter:card", content: "summary" },
     ],
   }),
-  component: () => <Guard>{() => <OrderDetail />}</Guard>,
+  component: () => <Guard>{(ctx) => <OrderDetail viewerRole={ctx.role} />}</Guard>,
 });
 
-function OrderDetail() {
+function OrderDetail({ viewerRole }: { viewerRole: Role }) {
   const { id } = Route.useParams();
   const { t, lang } = useI18n();
   const qc = useQueryClient();
