@@ -69,4 +69,4 @@ Phase 1, Step 1: Role system + identity anonymity
 ## Notes
 - This is a large project. Each phase will be built as a separate milestone and verified before moving to the next.
 - We will use Lovable Cloud for the database and Lovable AI for the assistant.
-- Phone OTP and social login (Google/Apple) will be configured when we reach the authentication milestone.
+- Simple email and password login and signup will be built first, in the first milestone. Phone OTP and social login (Google/Apple) will be configured later when we reach the extended authentication milestone.
