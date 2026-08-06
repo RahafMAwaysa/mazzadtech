@@ -32,7 +32,13 @@ type DeliveryOrder = {
   status: string;
   amount: number;
   customer_id: string;
+  supplier_id: string;
   created_at: string;
+  customerName?: string | null;
+  customerPhone?: string | null;
+  supplierName?: string | null;
+  supplierPhone?: string | null;
+  supplierCity?: string | null;
 };
 
 const NEXT: Record<string, "received_from_supplier" | "in_transit" | "delivered" | null> = {
@@ -67,12 +73,37 @@ function Body({ userId }: { userId: string }) {
 
     const { data, error } = await supabase
       .from("orders")
-      .select("id, order_number, status, amount, customer_id, created_at")
+      .select("id, order_number, status, amount, customer_id, supplier_id, created_at")
       .eq("delivery_company_id", company.id)
       .order("created_at", { ascending: false });
 
     if (error) toast.error(error.message);
-    setOrders((data as DeliveryOrder[]) ?? []);
+    const rows = (data as DeliveryOrder[]) ?? [];
+
+    const personIds = Array.from(new Set(rows.flatMap((o) => [o.customer_id, o.supplier_id])));
+    if (personIds.length > 0) {
+      const [{ data: profiles }, { data: suppliers }] = await Promise.all([
+        supabase.from("profiles").select("id, full_name, phone").in("id", personIds),
+        supabase
+          .from("supplier_profiles")
+          .select("user_id, company_name, city")
+          .in("user_id", personIds),
+      ]);
+      const byId = new Map((profiles ?? []).map((p) => [p.id, p]));
+      const bySupplier = new Map((suppliers ?? []).map((s) => [s.user_id, s]));
+      for (const o of rows) {
+        const c = byId.get(o.customer_id);
+        const s = bySupplier.get(o.supplier_id);
+        const sp = byId.get(o.supplier_id);
+        o.customerName = c?.full_name ?? null;
+        o.customerPhone = c?.phone ?? null;
+        o.supplierName = s?.company_name ?? sp?.full_name ?? null;
+        o.supplierPhone = sp?.phone ?? null;
+        o.supplierCity = s?.city ?? null;
+      }
+    }
+
+    setOrders(rows);
     setLoading(false);
   };
 
@@ -99,7 +130,7 @@ function Body({ userId }: { userId: string }) {
   return (
     <Page title={t("deliveries")}>
       <p className="text-sm text-muted-foreground">{t("assignedOrders")}</p>
-      <p className="mt-1 text-xs text-muted-foreground">{t("identityProtected")}</p>
+      <p className="mt-1 text-xs text-muted-foreground">{t("deliveryContactsNote")}</p>
 
       {loading ? (
         <div className="grid place-items-center py-16 text-muted-foreground">
@@ -119,13 +150,40 @@ function Body({ userId }: { userId: string }) {
                   <div>
                     <p className="font-medium">{order.order_number}</p>
                     <p className="text-xs text-muted-foreground">
-                      Customer #{shortRef(order.customer_id)}
+                      {Number(order.amount).toLocaleString()} {t("currency")}
                     </p>
                   </div>
                   <span className="rounded-full bg-primary-soft px-3 py-1 text-xs font-medium text-primary">
                     {t(statusKey(order.status))}
                   </span>
                 </div>
+
+                <div className="grid gap-2 rounded-xl bg-muted/50 p-3 text-xs sm:grid-cols-2">
+                  <div>
+                    <p className="font-medium text-foreground">{t("pickupFrom")}</p>
+                    <p className="text-muted-foreground">
+                      {order.supplierName ?? `${t("supplier")} #${shortRef(order.supplier_id)}`}
+                      {order.supplierCity ? ` · ${order.supplierCity}` : ""}
+                    </p>
+                    {order.supplierPhone && (
+                      <a href={`tel:${order.supplierPhone}`} className="text-primary">
+                        {order.supplierPhone}
+                      </a>
+                    )}
+                  </div>
+                  <div>
+                    <p className="font-medium text-foreground">{t("deliverTo")}</p>
+                    <p className="text-muted-foreground">
+                      {order.customerName ?? `${t("customer")} #${shortRef(order.customer_id)}`}
+                    </p>
+                    {order.customerPhone && (
+                      <a href={`tel:${order.customerPhone}`} className="text-primary">
+                        {order.customerPhone}
+                      </a>
+                    )}
+                  </div>
+                </div>
+
                 {next && (
                   <Button
                     className="w-full"
