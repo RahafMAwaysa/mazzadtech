@@ -22,7 +22,8 @@ export function supplierPublicName(
   supplier: { alias?: string | null; company_name?: string | null; user_id?: string | null } | null,
 ): string {
   if (!supplier) return "Verified Supplier";
-  if (viewerRole === "admin") return supplier.company_name ?? supplier.alias ?? "Supplier";
+  if (viewerRole === "admin" || viewerRole === "delivery")
+    return supplier.company_name ?? supplier.alias ?? "Supplier";
   // Trade alias only — never the legal/company contact identity.
   return supplier.alias ?? `Verified Supplier #${shortRef(supplier.user_id)}`;
 }
@@ -30,7 +31,8 @@ export function supplierPublicName(
 /** How a customer is shown to a supplier or delivery company. */
 export function customerPublicName(viewerRole: Role | null, customer: { id?: string | null; full_name?: string | null } | null): string {
   if (!customer) return "Customer";
-  if (viewerRole === "admin") return customer.full_name ?? `Customer #${shortRef(customer.id)}`;
+  if (viewerRole === "admin" || viewerRole === "delivery")
+    return customer.full_name ?? `Customer #${shortRef(customer.id)}`;
   return `Customer #${shortRef(customer.id)}`;
 }
 
