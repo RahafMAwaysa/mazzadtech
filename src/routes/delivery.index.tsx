@@ -130,7 +130,7 @@ function Body({ userId }: { userId: string }) {
   return (
     <Page title={t("deliveries")}>
       <p className="text-sm text-muted-foreground">{t("assignedOrders")}</p>
-      <p className="mt-1 text-xs text-muted-foreground">{t("identityProtected")}</p>
+      <p className="mt-1 text-xs text-muted-foreground">{t("deliveryContactsNote")}</p>
 
       {loading ? (
         <div className="grid place-items-center py-16 text-muted-foreground">
@@ -150,13 +150,40 @@ function Body({ userId }: { userId: string }) {
                   <div>
                     <p className="font-medium">{order.order_number}</p>
                     <p className="text-xs text-muted-foreground">
-                      Customer #{shortRef(order.customer_id)}
+                      {Number(order.amount).toLocaleString()} {t("currency")}
                     </p>
                   </div>
                   <span className="rounded-full bg-primary-soft px-3 py-1 text-xs font-medium text-primary">
                     {t(statusKey(order.status))}
                   </span>
                 </div>
+
+                <div className="grid gap-2 rounded-xl bg-muted/50 p-3 text-xs sm:grid-cols-2">
+                  <div>
+                    <p className="font-medium text-foreground">{t("pickupFrom")}</p>
+                    <p className="text-muted-foreground">
+                      {order.supplierName ?? `${t("supplier")} #${shortRef(order.supplier_id)}`}
+                      {order.supplierCity ? ` · ${order.supplierCity}` : ""}
+                    </p>
+                    {order.supplierPhone && (
+                      <a href={`tel:${order.supplierPhone}`} className="text-primary">
+                        {order.supplierPhone}
+                      </a>
+                    )}
+                  </div>
+                  <div>
+                    <p className="font-medium text-foreground">{t("deliverTo")}</p>
+                    <p className="text-muted-foreground">
+                      {order.customerName ?? `${t("customer")} #${shortRef(order.customer_id)}`}
+                    </p>
+                    {order.customerPhone && (
+                      <a href={`tel:${order.customerPhone}`} className="text-primary">
+                        {order.customerPhone}
+                      </a>
+                    )}
+                  </div>
+                </div>
+
                 {next && (
                   <Button
                     className="w-full"
