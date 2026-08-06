@@ -49,14 +49,20 @@ function AuthPage() {
     setBusy(true);
     try {
       if (mode === "in") {
-        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+        const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
-        // Route by the role actually stored for this account, not the form toggle.
-        const { data: roleRows } = await supabase
-          .from("user_roles")
-          .select("role")
-          .eq("user_id", data.user.id);
-        const stored = (roleRows ?? []).map((r) => r.role as string);
+        // Backfills the profile/role records for accounts created before the
+        // role bootstrap existed, then routes by the role actually stored.
+        let stored: string[] = [];
+        try {
+          const res = await ensureAccount();
+          stored = res.roles;
+        } catch {
+          stored = [];
+        }
+        if (adminMode && !stored.includes("admin")) {
+          toast.error(t("notAnAdmin"));
+        }
         const target = stored.includes("admin")
           ? "/admin"
           : stored.includes("supplier")
