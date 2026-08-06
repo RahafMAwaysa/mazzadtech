@@ -411,6 +411,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_courier_for_person: {
+        Args: { _person_id: string; _user_id: string }
+        Returns: boolean
+      }
       is_order_courier: {
         Args: { _order_id: string; _user_id: string }
         Returns: boolean
