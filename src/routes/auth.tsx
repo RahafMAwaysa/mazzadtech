@@ -41,6 +41,7 @@ function AuthPage() {
   const [company, setCompany] = useState("");
   const [phone, setPhone] = useState("");
   const [busy, setBusy] = useState(false);
+  const [adminMode, setAdminMode] = useState(false);
 
   const needsCompany = role === "supplier" || role === "delivery";
 
