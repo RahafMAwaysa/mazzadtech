@@ -197,6 +197,22 @@ function AuthPage() {
             </Button>
           </form>
         </Card>
+
+        <button
+          type="button"
+          onClick={() => {
+            setAdminMode((v) => !v);
+            setMode("in");
+          }}
+          className="mx-auto mt-4 flex items-center gap-2 rounded-xl border border-border bg-card px-4 py-2 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+        >
+          <ShieldCheck className="size-4" />
+          {adminMode ? t("backToNormalSignIn") : t("adminPortal")}
+        </button>
+      </Page>
+    </AppShell>
+  );
+}
       </Page>
     </AppShell>
   );
