@@ -106,7 +106,16 @@ function AuthPage() {
         </div>
 
         <Card className="mt-4 space-y-4">
-          <div className="grid grid-cols-2 rounded-xl bg-muted p-1 text-sm">
+          {adminMode && (
+            <div className="flex items-start gap-2 rounded-xl bg-primary-soft p-3 text-xs text-primary">
+              <ShieldCheck className="mt-0.5 size-4 shrink-0" />
+              <div className="min-w-0">
+                <p className="font-semibold">{t("adminPortal")}</p>
+                <p className="mt-1 opacity-90">{t("adminPortalHint")}</p>
+              </div>
+            </div>
+          )}
+          <div className={`grid-cols-2 rounded-xl bg-muted p-1 text-sm ${adminMode ? "hidden" : "grid"}`}>
             {(["in", "up"] as const).map((m) => (
               <button
                 key={m}
