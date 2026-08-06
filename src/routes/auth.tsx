@@ -1,18 +1,25 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { toast } from "sonner";
+import { ShieldCheck } from "lucide-react";
 import { AppShell, Page } from "@/components/AppShell";
 import { Button, Card, Field, Input, Spinner } from "@/components/ui-kit";
 import { useI18n } from "@/lib/i18n";
 import { supabase } from "@/integrations/supabase/client";
+import { ensureAccount } from "@/lib/account.functions";
+
+const TITLE = "Sign in — MazzadTech";
+const DESC = "Sign in or create your MazzadTech customer, supplier or delivery account.";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({
     meta: [
-      { title: "Sign in — Ateeq" },
-      { name: "description", content: "Sign in or create your Ateeq customer or supplier account." },
-      { property: "og:title", content: "Sign in — Ateeq" },
-      { property: "og:description", content: "Access your Ateeq account as a customer or supplier." },
+      { title: TITLE },
+      { name: "description", content: DESC },
+      { property: "og:title", content: TITLE },
+      { property: "og:description", content: DESC },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   component: AuthPage,
@@ -20,6 +27,7 @@ export const Route = createFileRoute("/auth")({
 
 const ROLES = ["customer", "supplier", "delivery"] as const;
 type SignupRole = (typeof ROLES)[number];
+
 
 
 function AuthPage() {
@@ -33,6 +41,7 @@ function AuthPage() {
   const [company, setCompany] = useState("");
   const [phone, setPhone] = useState("");
   const [busy, setBusy] = useState(false);
+  const [adminMode, setAdminMode] = useState(false);
 
   const needsCompany = role === "supplier" || role === "delivery";
 
@@ -41,14 +50,20 @@ function AuthPage() {
     setBusy(true);
     try {
       if (mode === "in") {
-        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+        const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
-        // Route by the role actually stored for this account, not the form toggle.
-        const { data: roleRows } = await supabase
-          .from("user_roles")
-          .select("role")
-          .eq("user_id", data.user.id);
-        const stored = (roleRows ?? []).map((r) => r.role as string);
+        // Backfills the profile/role records for accounts created before the
+        // role bootstrap existed, then routes by the role actually stored.
+        let stored: string[] = [];
+        try {
+          const res = await ensureAccount();
+          stored = res.roles;
+        } catch {
+          stored = [];
+        }
+        if (adminMode && !stored.includes("admin")) {
+          toast.error(t("notAnAdmin"));
+        }
         const target = stored.includes("admin")
           ? "/admin"
           : stored.includes("supplier")
@@ -91,7 +106,16 @@ function AuthPage() {
         </div>
 
         <Card className="mt-4 space-y-4">
-          <div className="grid grid-cols-2 rounded-xl bg-muted p-1 text-sm">
+          {adminMode && (
+            <div className="flex items-start gap-2 rounded-xl bg-primary-soft p-3 text-xs text-primary">
+              <ShieldCheck className="mt-0.5 size-4 shrink-0" />
+              <div className="min-w-0">
+                <p className="font-semibold">{t("adminPortal")}</p>
+                <p className="mt-1 opacity-90">{t("adminPortalHint")}</p>
+              </div>
+            </div>
+          )}
+          <div className={`grid-cols-2 rounded-xl bg-muted p-1 text-sm ${adminMode ? "hidden" : "grid"}`}>
             {(["in", "up"] as const).map((m) => (
               <button
                 key={m}
@@ -173,6 +197,18 @@ function AuthPage() {
             </Button>
           </form>
         </Card>
+
+        <button
+          type="button"
+          onClick={() => {
+            setAdminMode((v) => !v);
+            setMode("in");
+          }}
+          className="mx-auto mt-4 flex items-center gap-2 rounded-xl border border-border bg-card px-4 py-2 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+        >
+          <ShieldCheck className="size-4" />
+          {adminMode ? t("backToNormalSignIn") : t("adminPortal")}
+        </button>
       </Page>
     </AppShell>
   );
