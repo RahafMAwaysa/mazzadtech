@@ -213,7 +213,3 @@ function AuthPage() {
     </AppShell>
   );
 }
-      </Page>
-    </AppShell>
-  );
-}
