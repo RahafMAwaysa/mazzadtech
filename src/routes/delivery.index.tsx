@@ -73,12 +73,37 @@ function Body({ userId }: { userId: string }) {
 
     const { data, error } = await supabase
       .from("orders")
-      .select("id, order_number, status, amount, customer_id, created_at")
+      .select("id, order_number, status, amount, customer_id, supplier_id, created_at")
       .eq("delivery_company_id", company.id)
       .order("created_at", { ascending: false });
 
     if (error) toast.error(error.message);
-    setOrders((data as DeliveryOrder[]) ?? []);
+    const rows = (data as DeliveryOrder[]) ?? [];
+
+    const personIds = Array.from(new Set(rows.flatMap((o) => [o.customer_id, o.supplier_id])));
+    if (personIds.length > 0) {
+      const [{ data: profiles }, { data: suppliers }] = await Promise.all([
+        supabase.from("profiles").select("id, full_name, phone").in("id", personIds),
+        supabase
+          .from("supplier_profiles")
+          .select("user_id, company_name, city")
+          .in("user_id", personIds),
+      ]);
+      const byId = new Map((profiles ?? []).map((p) => [p.id, p]));
+      const bySupplier = new Map((suppliers ?? []).map((s) => [s.user_id, s]));
+      for (const o of rows) {
+        const c = byId.get(o.customer_id);
+        const s = bySupplier.get(o.supplier_id);
+        const sp = byId.get(o.supplier_id);
+        o.customerName = c?.full_name ?? null;
+        o.customerPhone = c?.phone ?? null;
+        o.supplierName = s?.company_name ?? sp?.full_name ?? null;
+        o.supplierPhone = sp?.phone ?? null;
+        o.supplierCity = s?.city ?? null;
+      }
+    }
+
+    setOrders(rows);
     setLoading(false);
   };
 
