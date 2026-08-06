@@ -1,18 +1,25 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { toast } from "sonner";
+import { ShieldCheck } from "lucide-react";
 import { AppShell, Page } from "@/components/AppShell";
 import { Button, Card, Field, Input, Spinner } from "@/components/ui-kit";
 import { useI18n } from "@/lib/i18n";
 import { supabase } from "@/integrations/supabase/client";
+import { ensureAccount } from "@/lib/account.functions";
+
+const TITLE = "Sign in — MazzadTech";
+const DESC = "Sign in or create your MazzadTech customer, supplier or delivery account.";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({
     meta: [
-      { title: "Sign in — Ateeq" },
-      { name: "description", content: "Sign in or create your Ateeq customer or supplier account." },
-      { property: "og:title", content: "Sign in — Ateeq" },
-      { property: "og:description", content: "Access your Ateeq account as a customer or supplier." },
+      { title: TITLE },
+      { name: "description", content: DESC },
+      { property: "og:title", content: TITLE },
+      { property: "og:description", content: DESC },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   component: AuthPage,
@@ -20,6 +27,7 @@ export const Route = createFileRoute("/auth")({
 
 const ROLES = ["customer", "supplier", "delivery"] as const;
 type SignupRole = (typeof ROLES)[number];
+
 
 
 function AuthPage() {
