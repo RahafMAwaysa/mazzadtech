@@ -48,5 +48,6 @@ export function deliveryPublicName(
 
 /** True when the viewer is allowed to see real personal identities. */
 export function canSeeRealIdentities(viewerRole: Role | null): boolean {
-  return viewerRole === "admin";
+  // Delivery partners need real names/phones to complete a handover.
+  return viewerRole === "admin" || viewerRole === "delivery";
 }
