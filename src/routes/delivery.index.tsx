@@ -32,7 +32,13 @@ type DeliveryOrder = {
   status: string;
   amount: number;
   customer_id: string;
+  supplier_id: string;
   created_at: string;
+  customerName?: string | null;
+  customerPhone?: string | null;
+  supplierName?: string | null;
+  supplierPhone?: string | null;
+  supplierCity?: string | null;
 };
 
 const NEXT: Record<string, "received_from_supplier" | "in_transit" | "delivered" | null> = {
