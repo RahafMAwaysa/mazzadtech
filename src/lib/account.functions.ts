@@ -14,10 +14,10 @@ export const ensureAccount = createServerFn({ method: "POST" })
 
     const { data: userRes } = await supabaseAdmin.auth.admin.getUserById(userId);
     const meta = (userRes?.user?.user_metadata ?? {}) as Record<string, unknown>;
-    const fullName = typeof meta.full_name === "string" ? meta.full_name : null;
-    const phone = typeof meta.phone === "string" ? meta.phone : null;
-    const companyName = typeof meta.company_name === "string" ? meta.company_name : null;
-    const wanted = typeof meta.role === "string" ? meta.role : "customer";
+    const fullName = typeof meta['full_name'] === "string" ? meta['full_name'] : null;
+    const phone = typeof meta['phone'] === "string" ? meta['phone'] : null;
+    const companyName = typeof meta['company_name'] === "string" ? meta['company_name'] : null;
+    const wanted = typeof meta['role'] === "string" ? meta['role'] : "customer";
     const role = ["customer", "supplier", "delivery"].includes(wanted) ? wanted : "customer";
 
     await supabaseAdmin
