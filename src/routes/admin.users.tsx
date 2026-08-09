@@ -37,7 +37,7 @@ function Body() {
   const [reasons, setReasons] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState<string | null>(null);
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, error } = useQuery({
     queryKey: ["admin-users"],
     queryFn: async () => {
       const { data: profiles, error } = await supabase
@@ -93,7 +93,11 @@ function Body() {
         />
       </div>
 
-      {isLoading ? (
+      {error ? (
+        <p className="rounded-xl bg-destructive/10 px-3 py-2 text-xs text-destructive">
+          {error instanceof Error ? error.message : String(error)}
+        </p>
+      ) : isLoading ? (
         <div className="grid place-items-center py-16 text-muted-foreground">
           <Spinner />
         </div>

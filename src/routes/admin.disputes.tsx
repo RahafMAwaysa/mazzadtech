@@ -29,7 +29,7 @@ function Body() {
   const [notes, setNotes] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState<string | null>(null);
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, error } = useQuery({
     queryKey: ["admin-disputes"],
     queryFn: async () => {
       const { data: disputes, error } = await supabase
@@ -57,6 +57,16 @@ function Body() {
     toast.success(t("disputeResolvedToast"));
     await qc.invalidateQueries({ queryKey: ["admin-disputes"] });
   };
+
+  if (error) {
+    return (
+      <Page title={t("disputes")}>
+        <p className="rounded-xl bg-destructive/10 px-3 py-2 text-xs text-destructive">
+          {error instanceof Error ? error.message : String(error)}
+        </p>
+      </Page>
+    );
+  }
 
   if (isLoading || !data) {
     return (

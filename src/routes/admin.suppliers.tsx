@@ -41,7 +41,7 @@ function Body() {
   const [notes, setNotes] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState<string | null>(null);
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, error } = useQuery({
     queryKey: ["admin-suppliers"],
     queryFn: async () => {
       const { data: suppliers, error } = await supabase
@@ -79,6 +79,16 @@ function Body() {
     }
     setBusy(null);
   };
+
+  if (error) {
+    return (
+      <Page title={t("suppliers")}>
+        <p className="rounded-xl bg-destructive/10 px-3 py-2 text-xs text-destructive">
+          {error instanceof Error ? error.message : String(error)}
+        </p>
+      </Page>
+    );
+  }
 
   if (isLoading || !data) {
     return (
