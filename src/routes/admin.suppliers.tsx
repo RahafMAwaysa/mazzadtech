@@ -8,6 +8,7 @@ import { Page } from "@/components/AppShell";
 import { Badge, Button, Card, EmptyState, Spinner, Textarea } from "@/components/ui-kit";
 import { categoryLabel, useI18n } from "@/lib/i18n";
 import { supabase } from "@/integrations/supabase/client";
+import { errorMessage } from "@/lib/utils";
 
 export const Route = createFileRoute("/admin/suppliers")({
   head: () => ({
@@ -84,7 +85,7 @@ function Body() {
     return (
       <Page title={t("suppliers")}>
         <p className="rounded-xl bg-destructive/10 px-3 py-2 text-xs text-destructive">
-          {error instanceof Error ? error.message : String(error)}
+          {errorMessage(error)}
         </p>
       </Page>
     );
