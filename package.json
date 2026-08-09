@@ -12,7 +12,6 @@
     "format": "prettier --write ."
   },
   "dependencies": {
-    "@ai-sdk/anthropic": "^4.0.36",
     "@ai-sdk/openai-compatible": "^3.0.17",
     "@ai-sdk/react": "^4.0.45",
     "@hookform/resolvers": "^5.2.2",
