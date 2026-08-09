@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { generateText, Output, NoObjectGeneratedError } from "ai";
 import { z } from "zod";
-import { createLovableAiGatewayProvider, ASSISTANT_MODEL } from "@/lib/ai-gateway.server";
+import { createAssistantProvider, ASSISTANT_MODEL } from "@/lib/ai-gateway.server";
 
 const schema = z.object({
   title: z.string(),
@@ -36,10 +36,10 @@ export const extractRequest = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: { transcript: string; lang: "en" | "ar" }) => input)
   .handler(async ({ data }) => {
-    const key = process.env["LOVABLE_API_KEY"];
-    if (!key) throw new Error("Missing LOVABLE_API_KEY");
+    const key = process.env["ANTHROPIC_API_KEY"];
+    if (!key) throw new Error("Missing ANTHROPIC_API_KEY");
 
-    const gateway = createLovableAiGatewayProvider(key, { structuredOutputs: true });
+    const provider = createAssistantProvider(key);
 
     const prompt = `Convert this shopping conversation into one structured electronics purchase request.
 
@@ -56,10 +56,9 @@ Rules:
 
     try {
       const { output } = await generateText({
-        model: gateway(ASSISTANT_MODEL),
+        model: provider(ASSISTANT_MODEL),
         output: Output.object({ schema }),
         prompt,
-        providerOptions: { lovable: { reasoningEffort: "none" } },
       });
       return {
         ...output,

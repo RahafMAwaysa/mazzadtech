@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { convertToModelMessages, streamText, type UIMessage } from "ai";
-import { createLovableAiGatewayProvider, ASSISTANT_MODEL } from "@/lib/ai-gateway.server";
+import { createAssistantProvider, ASSISTANT_MODEL } from "@/lib/ai-gateway.server";
 
 const SYSTEM_EN = `You are the friendly shopping assistant of Ateeq, a reverse-auction marketplace for electronics
 (laptops, smartphones, smart watches, projectors, cameras, tablets, audio, accessories).
@@ -33,16 +33,15 @@ export const Route = createFileRoute("/api/chat")({
           return new Response("Messages are required", { status: 400 });
         }
 
-        const key = process.env["LOVABLE_API_KEY"];
-        if (!key) return new Response("Missing LOVABLE_API_KEY", { status: 500 });
+        const key = process.env["ANTHROPIC_API_KEY"];
+        if (!key) return new Response("Missing ANTHROPIC_API_KEY", { status: 500 });
 
-        const gateway = createLovableAiGatewayProvider(key);
+        const provider = createAssistantProvider(key);
 
         const result = streamText({
-          model: gateway(ASSISTANT_MODEL),
+          model: provider(ASSISTANT_MODEL),
           system: SYSTEM_EN,
           messages: await convertToModelMessages(messages),
-          providerOptions: { lovable: { reasoningEffort: "none" } },
         });
 
         return result.toUIMessageStreamResponse({ originalMessages: messages });
