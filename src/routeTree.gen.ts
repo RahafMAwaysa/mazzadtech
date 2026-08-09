@@ -13,8 +13,10 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AssistantRouteImport } from './routes/assistant'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
+import { Route as AdminDisputesRouteImport } from './routes/admin.disputes'
 import { Route as AdminOrdersRouteImport } from './routes/admin.orders'
 import { Route as AdminSuppliersRouteImport } from './routes/admin.suppliers'
+import { Route as AdminUsersRouteImport } from './routes/admin.users'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
 import { Route as CheckoutOfferIdRouteImport } from './routes/checkout.$offerId'
 import { Route as DeliveryIndexRouteImport } from './routes/delivery.index'
@@ -50,6 +52,11 @@ const AdminIndexRoute = AdminIndexRouteImport.update({
   path: '/admin/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminDisputesRoute = AdminDisputesRouteImport.update({
+  id: '/admin/disputes',
+  path: '/admin/disputes',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminOrdersRoute = AdminOrdersRouteImport.update({
   id: '/admin/orders',
   path: '/admin/orders',
@@ -58,6 +65,11 @@ const AdminOrdersRoute = AdminOrdersRouteImport.update({
 const AdminSuppliersRoute = AdminSuppliersRouteImport.update({
   id: '/admin/suppliers',
   path: '/admin/suppliers',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminUsersRoute = AdminUsersRouteImport.update({
+  id: '/admin/users',
+  path: '/admin/users',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiChatRoute = ApiChatRouteImport.update({
@@ -135,8 +147,10 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/assistant': typeof AssistantRoute
   '/auth': typeof AuthRoute
+  '/admin/disputes': typeof AdminDisputesRoute
   '/admin/orders': typeof AdminOrdersRoute
   '/admin/suppliers': typeof AdminSuppliersRoute
+  '/admin/users': typeof AdminUsersRoute
   '/api/chat': typeof ApiChatRoute
   '/checkout/$offerId': typeof CheckoutOfferIdRoute
   '/delivery/profile': typeof DeliveryProfileRoute
@@ -157,8 +171,10 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/assistant': typeof AssistantRoute
   '/auth': typeof AuthRoute
+  '/admin/disputes': typeof AdminDisputesRoute
   '/admin/orders': typeof AdminOrdersRoute
   '/admin/suppliers': typeof AdminSuppliersRoute
+  '/admin/users': typeof AdminUsersRoute
   '/api/chat': typeof ApiChatRoute
   '/checkout/$offerId': typeof CheckoutOfferIdRoute
   '/delivery/profile': typeof DeliveryProfileRoute
@@ -180,8 +196,10 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/assistant': typeof AssistantRoute
   '/auth': typeof AuthRoute
+  '/admin/disputes': typeof AdminDisputesRoute
   '/admin/orders': typeof AdminOrdersRoute
   '/admin/suppliers': typeof AdminSuppliersRoute
+  '/admin/users': typeof AdminUsersRoute
   '/api/chat': typeof ApiChatRoute
   '/checkout/$offerId': typeof CheckoutOfferIdRoute
   '/delivery/profile': typeof DeliveryProfileRoute
@@ -204,8 +222,10 @@ export interface FileRouteTypes {
     | '/'
     | '/assistant'
     | '/auth'
+    | '/admin/disputes'
     | '/admin/orders'
     | '/admin/suppliers'
+    | '/admin/users'
     | '/api/chat'
     | '/checkout/$offerId'
     | '/delivery/profile'
@@ -226,8 +246,10 @@ export interface FileRouteTypes {
     | '/'
     | '/assistant'
     | '/auth'
+    | '/admin/disputes'
     | '/admin/orders'
     | '/admin/suppliers'
+    | '/admin/users'
     | '/api/chat'
     | '/checkout/$offerId'
     | '/delivery/profile'
@@ -248,8 +270,10 @@ export interface FileRouteTypes {
     | '/'
     | '/assistant'
     | '/auth'
+    | '/admin/disputes'
     | '/admin/orders'
     | '/admin/suppliers'
+    | '/admin/users'
     | '/api/chat'
     | '/checkout/$offerId'
     | '/delivery/profile'
@@ -271,8 +295,10 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AssistantRoute: typeof AssistantRoute
   AuthRoute: typeof AuthRoute
+  AdminDisputesRoute: typeof AdminDisputesRoute
   AdminOrdersRoute: typeof AdminOrdersRoute
   AdminSuppliersRoute: typeof AdminSuppliersRoute
+  AdminUsersRoute: typeof AdminUsersRoute
   ApiChatRoute: typeof ApiChatRoute
   CheckoutOfferIdRoute: typeof CheckoutOfferIdRoute
   DeliveryProfileRoute: typeof DeliveryProfileRoute
@@ -320,6 +346,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/disputes': {
+      id: '/admin/disputes'
+      path: '/admin/disputes'
+      fullPath: '/admin/disputes'
+      preLoaderRoute: typeof AdminDisputesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/orders': {
       id: '/admin/orders'
       path: '/admin/orders'
@@ -332,6 +365,13 @@ declare module '@tanstack/react-router' {
       path: '/admin/suppliers'
       fullPath: '/admin/suppliers'
       preLoaderRoute: typeof AdminSuppliersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/users': {
+      id: '/admin/users'
+      path: '/admin/users'
+      fullPath: '/admin/users'
+      preLoaderRoute: typeof AdminUsersRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/chat': {
@@ -439,8 +479,10 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AssistantRoute: AssistantRoute,
   AuthRoute: AuthRoute,
+  AdminDisputesRoute: AdminDisputesRoute,
   AdminOrdersRoute: AdminOrdersRoute,
   AdminSuppliersRoute: AdminSuppliersRoute,
+  AdminUsersRoute: AdminUsersRoute,
   ApiChatRoute: ApiChatRoute,
   CheckoutOfferIdRoute: CheckoutOfferIdRoute,
   DeliveryProfileRoute: DeliveryProfileRoute,
@@ -460,3 +502,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}

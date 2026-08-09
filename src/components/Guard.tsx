@@ -12,7 +12,7 @@ export function Guard({
   roles?: Role[];
   children: (ctx: { userId: string; role: Role }) => ReactNode;
 }) {
-  const { loading, user, role } = useSession();
+  const { loading, user, role, suspended, suspensionReason } = useSession();
   const { t } = useI18n();
 
   if (loading) {
@@ -33,6 +33,17 @@ export function Guard({
           <Link to="/auth">
             <Button>{t("signIn")}</Button>
           </Link>
+        </div>
+      </AppShell>
+    );
+  }
+
+  if (suspended && role !== "admin") {
+    return (
+      <AppShell role={role} signedIn>
+        <div className="space-y-2 px-6 py-20 text-center">
+          <p className="font-semibold text-destructive">{t("accountSuspended")}</p>
+          {suspensionReason && <p className="text-sm text-muted-foreground">{suspensionReason}</p>}
         </div>
       </AppShell>
     );

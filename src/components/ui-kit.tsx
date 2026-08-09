@@ -88,7 +88,7 @@ export function Badge({
   className,
 }: {
   children: ReactNode;
-  tone?: "muted" | "primary" | "success" | "warning" | "accent";
+  tone?: "muted" | "primary" | "success" | "warning" | "accent" | "danger";
   className?: string;
 }) {
   const tones = {
@@ -97,6 +97,7 @@ export function Badge({
     success: "bg-success/12 text-success",
     warning: "bg-warning/18 text-warning-foreground",
     accent: "bg-accent/20 text-accent-foreground",
+    danger: "bg-destructive/12 text-destructive",
   } as const;
   return (
     <span

@@ -107,6 +107,7 @@ export type Database = {
           status: Database["public"]["Enums"]["offer_status"]
           supplier_id: string
           warranty_months: number
+          video_url: string | null
         }
         Insert: {
           benefits?: string | null
@@ -126,6 +127,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["offer_status"]
           supplier_id: string
           warranty_months?: number
+          video_url?: string | null
         }
         Update: {
           benefits?: string | null
@@ -145,6 +147,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["offer_status"]
           supplier_id?: string
           warranty_months?: number
+          video_url?: string | null
         }
         Relationships: [
           {
@@ -192,6 +195,9 @@ export type Database = {
         Row: {
           amount: number
           commission: number
+          customer_commission: number
+          delivery_fee: number
+          payment_card_id: string | null
           created_at: string
           customer_id: string
           delivery_company_id: string | null
@@ -207,6 +213,9 @@ export type Database = {
         Insert: {
           amount: number
           commission?: number
+          customer_commission?: number
+          delivery_fee?: number
+          payment_card_id?: string | null
           created_at?: string
           customer_id: string
           delivery_company_id?: string | null
@@ -222,6 +231,9 @@ export type Database = {
         Update: {
           amount?: number
           commission?: number
+          customer_commission?: number
+          delivery_fee?: number
+          payment_card_id?: string | null
           created_at?: string
           customer_id?: string
           delivery_company_id?: string | null
@@ -256,6 +268,13 @@ export type Database = {
             referencedRelation: "purchase_requests"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "orders_payment_card_id_fkey"
+            columns: ["payment_card_id"]
+            isOneToOne: false
+            referencedRelation: "payment_cards"
+            referencedColumns: ["id"]
+          },
         ]
       }
       profiles: {
@@ -265,6 +284,8 @@ export type Database = {
           id: string
           language: string
           phone: string | null
+          suspended: boolean
+          suspension_reason: string | null
         }
         Insert: {
           created_at?: string
@@ -272,6 +293,8 @@ export type Database = {
           id: string
           language?: string
           phone?: string | null
+          suspended?: boolean
+          suspension_reason?: string | null
         }
         Update: {
           created_at?: string
@@ -279,6 +302,8 @@ export type Database = {
           id?: string
           language?: string
           phone?: string | null
+          suspended?: boolean
+          suspension_reason?: string | null
         }
         Relationships: []
       }
@@ -352,6 +377,8 @@ export type Database = {
           response_rate: number
           user_id: string
           verified: boolean
+          verification_status: string
+          verification_note: string | null
         }
         Insert: {
           alias?: string
@@ -365,6 +392,8 @@ export type Database = {
           response_rate?: number
           user_id: string
           verified?: boolean
+          verification_status?: string
+          verification_note?: string | null
         }
         Update: {
           alias?: string
@@ -378,6 +407,8 @@ export type Database = {
           response_rate?: number
           user_id?: string
           verified?: boolean
+          verification_status?: string
+          verification_note?: string | null
         }
         Relationships: []
       }
@@ -399,6 +430,287 @@ export type Database = {
         }
         Relationships: []
       }
+      platform_settings: {
+        Row: {
+          id: boolean
+          default_supplier_commission_pct: number
+          default_customer_commission_pct: number
+          default_delivery_commission_pct: number
+          updated_at: string
+        }
+        Insert: {
+          id?: boolean
+          default_supplier_commission_pct?: number
+          default_customer_commission_pct?: number
+          default_delivery_commission_pct?: number
+          updated_at?: string
+        }
+        Update: {
+          id?: boolean
+          default_supplier_commission_pct?: number
+          default_customer_commission_pct?: number
+          default_delivery_commission_pct?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      categories: {
+        Row: {
+          id: string
+          name: string
+          name_ar: string | null
+          active: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          name_ar?: string | null
+          active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          name_ar?: string | null
+          active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      payment_cards: {
+        Row: {
+          id: string
+          customer_id: string
+          brand: string
+          last4: string
+          is_default: boolean
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          customer_id: string
+          brand?: string
+          last4: string
+          is_default?: boolean
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          customer_id?: string
+          brand?: string
+          last4?: string
+          is_default?: boolean
+          created_at?: string
+        }
+        Relationships: []
+      }
+      disputes: {
+        Row: {
+          id: string
+          order_id: string
+          filed_by: string
+          filed_by_role: string
+          category: string
+          description: string
+          status: string
+          resolution_action: string | null
+          resolution_note: string | null
+          resolved_by: string | null
+          created_at: string
+          resolved_at: string | null
+        }
+        Insert: {
+          id?: string
+          order_id: string
+          filed_by: string
+          filed_by_role: string
+          category: string
+          description: string
+          status?: string
+          resolution_action?: string | null
+          resolution_note?: string | null
+          resolved_by?: string | null
+          created_at?: string
+          resolved_at?: string | null
+        }
+        Update: {
+          id?: string
+          order_id?: string
+          filed_by?: string
+          filed_by_role?: string
+          category?: string
+          description?: string
+          status?: string
+          resolution_action?: string | null
+          resolution_note?: string | null
+          resolved_by?: string | null
+          created_at?: string
+          resolved_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "disputes_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ratings: {
+        Row: {
+          id: string
+          order_id: string
+          rater_id: string
+          ratee_id: string
+          rater_role: string
+          stars: number
+          comment: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          order_id: string
+          rater_id: string
+          ratee_id: string
+          rater_role: string
+          stars: number
+          comment?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          order_id?: string
+          rater_id?: string
+          ratee_id?: string
+          rater_role?: string
+          stars?: number
+          comment?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
+      reports: {
+        Row: {
+          id: string
+          supplier_id: string
+          title: string
+          params: Json
+          content: Json
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          supplier_id: string
+          title: string
+          params?: Json
+          content?: Json
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          supplier_id?: string
+          title?: string
+          params?: Json
+          content?: Json
+          created_at?: string
+        }
+        Relationships: []
+      }
+      transaction_contracts: {
+        Row: {
+          id: string
+          order_id: string
+          payload: Json
+          hash: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          order_id: string
+          payload: Json
+          hash: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          order_id?: string
+          payload?: Json
+          hash?: string
+          created_at?: string
+        }
+        Relationships: []
+      }
+      wallets: {
+        Row: {
+          id: string
+          supplier_id: string
+          balance: number
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          supplier_id: string
+          balance?: number
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          supplier_id?: string
+          balance?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      wallet_transactions: {
+        Row: {
+          id: string
+          wallet_id: string
+          order_id: string | null
+          type: string
+          amount: number
+          note: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          wallet_id: string
+          order_id?: string | null
+          type: string
+          amount: number
+          note?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          wallet_id?: string
+          order_id?: string | null
+          type?: string
+          amount?: number
+          note?: string | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wallet_transactions_wallet_id_fkey"
+            columns: ["wallet_id"]
+            isOneToOne: false
+            referencedRelation: "wallets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wallet_transactions_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -418,6 +730,22 @@ export type Database = {
       is_order_courier: {
         Args: { _order_id: string; _user_id: string }
         Returns: boolean
+      }
+      get_commission_rates: {
+        Args: { _category?: string }
+        Returns: { supplier_pct: number; customer_pct: number; delivery_pct: number }[]
+      }
+      credit_supplier_wallet: {
+        Args: { _supplier_id: string; _amount: number; _order_id: string }
+        Returns: undefined
+      }
+      withdraw_from_wallet: {
+        Args: { _amount: number }
+        Returns: undefined
+      }
+      resolve_dispute: {
+        Args: { _dispute_id: string; _action: string; _note: string }
+        Returns: undefined
       }
     }
     Enums: {

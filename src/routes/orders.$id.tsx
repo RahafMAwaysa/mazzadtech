@@ -1,10 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect } from "react";
-import { Check } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Check, MessageSquareWarning } from "lucide-react";
+import { toast } from "sonner";
 import { Guard } from "@/components/Guard";
 import { Page } from "@/components/AppShell";
-import { Badge, Card, Spinner } from "@/components/ui-kit";
+import { Badge, Button, Card, Field, Spinner, Textarea } from "@/components/ui-kit";
 import { useI18n } from "@/lib/i18n";
 import { supabase } from "@/integrations/supabase/client";
 import { ORDER_FLOW, statusKey } from "@/lib/order-status";
@@ -23,13 +24,19 @@ export const Route = createFileRoute("/orders/$id")({
       { name: "twitter:card", content: "summary" },
     ],
   }),
-  component: () => <Guard>{(ctx) => <OrderDetail viewerRole={ctx.role} />}</Guard>,
+  component: () => <Guard>{(ctx) => <OrderDetail viewerRole={ctx.role} userId={ctx.userId} />}</Guard>,
 });
 
-function OrderDetail({ viewerRole }: { viewerRole: Role }) {
+const DISPUTE_CATEGORIES = ["delivery_delay", "product_mismatch", "payment_issue", "other"] as const;
+
+function OrderDetail({ viewerRole, userId }: { viewerRole: Role; userId: string }) {
   const { id } = Route.useParams();
   const { t, lang } = useI18n();
   const qc = useQueryClient();
+  const [filing, setFiling] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [category, setCategory] = useState<(typeof DISPUTE_CATEGORIES)[number]>("delivery_delay");
+  const [description, setDescription] = useState("");
 
   const { data, isLoading } = useQuery({
     queryKey: ["order", id],
@@ -45,7 +52,13 @@ function OrderDetail({ viewerRole }: { viewerRole: Role }) {
         .select("alias, company_name, city, rating, user_id")
         .eq("user_id", data.supplier_id)
         .maybeSingle();
-      return { order: data, supplier };
+      const { data: myDispute } = await supabase
+        .from("disputes")
+        .select("*")
+        .eq("order_id", id)
+        .eq("filed_by", userId)
+        .maybeSingle();
+      return { order: data, supplier, myDispute };
     },
   });
 
@@ -69,6 +82,30 @@ function OrderDetail({ viewerRole }: { viewerRole: Role }) {
     return () => clearTimeout(timer);
   }, [status, id, qc, AUTO_UNTIL]);
 
+  const fileDispute = async () => {
+    if (!description.trim()) {
+      toast.error(t("describeIssue"));
+      return;
+    }
+    if (viewerRole !== "customer" && viewerRole !== "supplier") return;
+    setBusy(true);
+    const { error } = await supabase.from("disputes").insert({
+      order_id: id,
+      filed_by: userId,
+      filed_by_role: viewerRole,
+      category,
+      description: description.trim(),
+    });
+    setBusy(false);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success(t("disputeFiled"));
+    setFiling(false);
+    await qc.invalidateQueries({ queryKey: ["order", id] });
+  };
+
   if (isLoading || !data) {
     return (
       <Page>
@@ -77,9 +114,10 @@ function OrderDetail({ viewerRole }: { viewerRole: Role }) {
     );
   }
 
-  const { order, supplier } = data;
+  const { order, supplier, myDispute } = data;
   const currentIndex = ORDER_FLOW.indexOf(order.status as (typeof ORDER_FLOW)[number]);
   const eta = estimatedDelivery(order.created_at, order.offers?.delivery_days ?? 3, lang);
+  const canFile = viewerRole === "customer" || viewerRole === "supplier";
 
   return (
     <Page title={t("orderStatus")}>
@@ -131,6 +169,58 @@ function OrderDetail({ viewerRole }: { viewerRole: Role }) {
         </ol>
         <p className="text-[11px] text-muted-foreground">{t("trackingSim")}</p>
       </Card>
+
+      {canFile && (
+        <Card className="space-y-3">
+          <p className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
+            <MessageSquareWarning className="size-3.5" />
+            {t("haveAnIssue")}
+          </p>
+
+          {myDispute ? (
+            <div className="space-y-1.5">
+              <Badge tone={myDispute.status === "resolved" ? "success" : "warning"}>
+                {t(myDispute.status === "resolved" ? "disputeResolved" : "disputeOpen")}
+              </Badge>
+              <p className="text-xs text-muted-foreground">{myDispute.description}</p>
+              {myDispute.resolution_note && (
+                <p className="rounded-xl bg-muted/60 px-3 py-2 text-xs text-muted-foreground">
+                  {myDispute.resolution_note}
+                </p>
+              )}
+            </div>
+          ) : filing ? (
+            <div className="space-y-2">
+              <select
+                className="w-full rounded-xl border border-border bg-background p-2 text-sm"
+                value={category}
+                onChange={(e) => setCategory(e.target.value as (typeof DISPUTE_CATEGORIES)[number])}
+              >
+                {DISPUTE_CATEGORIES.map((c) => (
+                  <option key={c} value={c}>
+                    {t(`disputeCategory_${c}`)}
+                  </option>
+                ))}
+              </select>
+              <Field label={t("describeIssue")}>
+                <Textarea rows={3} value={description} onChange={(e) => setDescription(e.target.value)} />
+              </Field>
+              <div className="flex gap-2">
+                <Button size="sm" onClick={fileDispute} disabled={busy}>
+                  {busy ? <Spinner /> : t("submitDispute")}
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => setFiling(false)}>
+                  {t("back")}
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <Button size="sm" variant="outline" onClick={() => setFiling(true)}>
+              {t("reportIssue")}
+            </Button>
+          )}
+        </Card>
+      )}
     </Page>
   );
 }

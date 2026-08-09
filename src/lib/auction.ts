@@ -44,3 +44,22 @@ export function fileToCompactDataUrl(file: File, max = 640): Promise<string> {
     reader.readAsDataURL(file);
   });
 }
+
+/**
+ * Prototype-only video handling: embeds the raw file as a data URL, capped
+ * at 8MB. This is fine for short demo clips but NOT how real product videos
+ * should be stored — before going live, swap this for an upload to a proper
+ * Supabase Storage bucket and store the resulting URL instead.
+ */
+export function videoFileToDataUrl(file: File, maxBytes = 8 * 1024 * 1024): Promise<string> {
+  return new Promise((resolve, reject) => {
+    if (file.size > maxBytes) {
+      reject(new Error(`Video is too large (max ${Math.round(maxBytes / 1024 / 1024)}MB for this prototype)`));
+      return;
+    }
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error("Could not read file"));
+    reader.onload = () => resolve(String(reader.result));
+    reader.readAsDataURL(file);
+  });
+}

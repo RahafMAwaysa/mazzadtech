@@ -11,6 +11,8 @@ import {
   LogOut,
   Languages,
   Truck,
+  AlertTriangle,
+  Users,
 } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { signOut, type Role } from "@/lib/session";
@@ -49,6 +51,8 @@ export function AppShell({
           ? [
               { to: "/admin", label: t("dashboard"), icon: <LayoutDashboard className="size-5" /> },
               { to: "/admin/suppliers", label: t("suppliers"), icon: <ShieldCheck className="size-5" /> },
+              { to: "/admin/disputes", label: t("disputes"), icon: <AlertTriangle className="size-5" /> },
+              { to: "/admin/users", label: t("users"), icon: <Users className="size-5" /> },
               { to: "/admin/orders", label: t("orders"), icon: <Package className="size-5" /> },
             ]
           : [

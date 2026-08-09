@@ -9,6 +9,8 @@ export type SessionState = {
   session: Session | null;
   user: User | null;
   role: Role | null;
+  suspended: boolean;
+  suspensionReason: string | null;
 };
 
 export function useSession(): SessionState {
@@ -17,6 +19,8 @@ export function useSession(): SessionState {
     session: null,
     user: null,
     role: null,
+    suspended: false,
+    suspensionReason: null,
   });
 
   useEffect(() => {
@@ -24,15 +28,15 @@ export function useSession(): SessionState {
 
     const loadRole = async (session: Session | null) => {
       if (!session) {
-        if (active) setState({ loading: false, session: null, user: null, role: null });
+        if (active) setState({ loading: false, session: null, user: null, role: null, suspended: false, suspensionReason: null });
         return;
       }
-      const { data } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", session.user.id);
+      const [{ data: roleRows }, { data: profile }] = await Promise.all([
+        supabase.from("user_roles").select("role").eq("user_id", session.user.id),
+        supabase.from("profiles").select("suspended, suspension_reason").eq("id", session.user.id).maybeSingle(),
+      ]);
       if (!active) return;
-      const roles = (data ?? []).map((r) => r.role as Role);
+      const roles = (roleRows ?? []).map((r) => r.role as Role);
       const role: Role = roles.includes("admin")
         ? "admin"
         : roles.includes("supplier")
@@ -40,7 +44,14 @@ export function useSession(): SessionState {
           : roles.includes("delivery")
             ? "delivery"
             : "customer";
-      setState({ loading: false, session, user: session.user, role });
+      setState({
+        loading: false,
+        session,
+        user: session.user,
+        role,
+        suspended: profile?.suspended ?? false,
+        suspensionReason: profile?.suspension_reason ?? null,
+      });
     };
 
     const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
