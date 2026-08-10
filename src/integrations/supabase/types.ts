@@ -197,6 +197,7 @@ export type Database = {
           commission: number
           customer_commission: number
           delivery_fee: number
+          delivery_location_id: string | null
           payment_card_id: string | null
           created_at: string
           customer_id: string
@@ -215,6 +216,7 @@ export type Database = {
           commission?: number
           customer_commission?: number
           delivery_fee?: number
+          delivery_location_id?: string | null
           payment_card_id?: string | null
           created_at?: string
           customer_id: string
@@ -233,6 +235,7 @@ export type Database = {
           commission?: number
           customer_commission?: number
           delivery_fee?: number
+          delivery_location_id?: string | null
           payment_card_id?: string | null
           created_at?: string
           customer_id?: string
@@ -273,6 +276,13 @@ export type Database = {
             columns: ["payment_card_id"]
             isOneToOne: false
             referencedRelation: "payment_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_delivery_location_id_fkey"
+            columns: ["delivery_location_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_locations"
             referencedColumns: ["id"]
           },
         ]

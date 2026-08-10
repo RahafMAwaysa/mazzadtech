@@ -1,14 +1,15 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
-import { CreditCard, ShieldCheck, CheckCircle2, Plus } from "lucide-react";
+import { CreditCard, ShieldCheck, CheckCircle2, Plus, MapPin } from "lucide-react";
 import { toast } from "sonner";
 import { Guard } from "@/components/Guard";
 import { Page } from "@/components/AppShell";
-import { Button, Card, Spinner } from "@/components/ui-kit";
+import { Button, Card, Field, Input, Spinner } from "@/components/ui-kit";
 import { useI18n } from "@/lib/i18n";
 import { supabase } from "@/integrations/supabase/client";
 import { estimatedDelivery } from "@/lib/auction";
+import { errorMessage } from "@/lib/utils";
 
 export const Route = createFileRoute("/checkout/$offerId")({
   head: () => ({
@@ -28,6 +29,8 @@ export const Route = createFileRoute("/checkout/$offerId")({
 // customer wallet. This keeps the money flow simple, safe and fully
 // digital/traceable. COD can be revisited in a later phase.
 type Success = { id: string; orderNumber: string; eta: string };
+type NewLocation = { label: string; address: string; city: string; phone: string };
+const EMPTY_LOCATION: NewLocation = { label: "", address: "", city: "", phone: "" };
 
 function Checkout({ userId }: { userId: string }) {
   const { offerId } = Route.useParams();
@@ -40,6 +43,10 @@ function Checkout({ userId }: { userId: string }) {
   const [addingCard, setAddingCard] = useState(false);
   const [newLast4, setNewLast4] = useState("");
   const [newBrand, setNewBrand] = useState("Visa");
+
+  const [selectedLocationId, setSelectedLocationId] = useState<string | null>(null);
+  const [addingLocation, setAddingLocation] = useState(false);
+  const [newLocation, setNewLocation] = useState<NewLocation>(EMPTY_LOCATION);
 
   const { data, isLoading } = useQuery({
     queryKey: ["offer", offerId],
@@ -67,12 +74,39 @@ function Checkout({ userId }: { userId: string }) {
     },
   });
 
+  const { data: locations, isLoading: locationsLoading } = useQuery({
+    queryKey: ["my-delivery-locations", userId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("delivery_locations")
+        .select("*")
+        .eq("user_id", userId)
+        .order("is_default", { ascending: false })
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+  });
+
   // Default to the customer's saved default card (or the first one) once loaded.
   useEffect(() => {
     if (!cards || cards.length === 0 || selectedCardId) return;
     const def = cards.find((c) => c.is_default) ?? cards[0];
     if (def) setSelectedCardId(def.id);
   }, [cards, selectedCardId]);
+
+  // Same default-selection pattern for delivery locations. If the customer
+  // has none saved yet, open the "add new" form right away instead of
+  // leaving them with nothing to pick.
+  useEffect(() => {
+    if (!locations || selectedLocationId || addingLocation) return;
+    if (locations.length === 0) {
+      setAddingLocation(true);
+      return;
+    }
+    const def = locations.find((l) => l.is_default) ?? locations[0];
+    if (def) setSelectedLocationId(def.id);
+  }, [locations, selectedLocationId, addingLocation]);
 
   const { data: rates } = useQuery({
     queryKey: ["commission_rates"],
@@ -127,8 +161,38 @@ function Checkout({ userId }: { userId: string }) {
       toast.error(t("selectCardFirst"));
       return;
     }
+    if (!addingLocation && !selectedLocationId) {
+      toast.error(t("selectLocationFirst"));
+      return;
+    }
+    if (addingLocation && (!newLocation.label.trim() || !newLocation.address.trim())) {
+      toast.error(t("locationFieldsRequired"));
+      return;
+    }
     setBusy(true);
     try {
+      // Resolve the delivery location for this order: either the one the
+      // customer picked from their saved list, or a brand-new one they just
+      // typed in — which also gets saved to their profile for next time.
+      let locationId = selectedLocationId;
+      if (addingLocation) {
+        const { data: savedLocation, error: locationError } = await supabase
+          .from("delivery_locations")
+          .insert({
+            user_id: userId,
+            label: newLocation.label.trim(),
+            address: newLocation.address.trim(),
+            city: newLocation.city.trim() || null,
+            phone: newLocation.phone.trim() || null,
+            is_default: !locations || locations.length === 0,
+          })
+          .select("id")
+          .single();
+        if (locationError) throw locationError;
+        locationId = savedLocation.id;
+        await qc.invalidateQueries({ queryKey: ["my-delivery-locations", userId] });
+      }
+
       // Phase 1 keeps delivery simple: auto-assign the single active delivery
       // company (if one has signed up yet) so the order shows up on their
       // list immediately — no manual admin dispatch step required.
@@ -148,6 +212,7 @@ function Checkout({ userId }: { userId: string }) {
           customer_id: userId,
           supplier_id: data.supplier_id,
           delivery_company_id: courier?.id ?? null,
+          delivery_location_id: locationId,
           amount,
           commission: supplierCommission,
           customer_commission: customerCommission,
@@ -180,7 +245,7 @@ function Checkout({ userId }: { userId: string }) {
         eta: estimatedDelivery(order.created_at, data.delivery_days, lang),
       });
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Payment failed");
+      toast.error(errorMessage(error));
     } finally {
       setBusy(false);
     }
@@ -247,6 +312,82 @@ function Checkout({ userId }: { userId: string }) {
       </Card>
 
       <div className="space-y-2">
+        <p className="text-xs font-medium text-muted-foreground">{t("deliveryDestination")}</p>
+
+        {locationsLoading && <Spinner />}
+
+        {locations?.map((loc) => (
+          <button
+            key={loc.id}
+            onClick={() => {
+              setSelectedLocationId(loc.id);
+              setAddingLocation(false);
+            }}
+            className={`flex w-full items-start gap-3 rounded-2xl border p-3.5 text-start text-sm transition-colors ${
+              !addingLocation && selectedLocationId === loc.id
+                ? "border-primary bg-primary-soft text-primary"
+                : "border-border bg-card"
+            }`}
+          >
+            <MapPin className="mt-0.5 size-4 shrink-0" />
+            <span>
+              <span className="font-medium">{loc.label}</span>
+              <span className="block text-xs text-muted-foreground">
+                {loc.address}
+                {loc.city ? `, ${loc.city}` : ""}
+              </span>
+            </span>
+          </button>
+        ))}
+
+        {!addingLocation ? (
+          <button
+            onClick={() => {
+              setAddingLocation(true);
+              setSelectedLocationId(null);
+            }}
+            className="flex w-full items-center gap-2 rounded-2xl border border-dashed border-border p-3.5 text-start text-sm text-muted-foreground"
+          >
+            <Plus className="size-4" />
+            {t("addNewLocation")}
+          </button>
+        ) : (
+          <Card className="space-y-2">
+            <Field label={t("locationLabel")}>
+              <Input
+                value={newLocation.label}
+                onChange={(e) => setNewLocation((f) => ({ ...f, label: e.target.value }))}
+                placeholder={t("locationLabelPlaceholder")}
+              />
+            </Field>
+            <Field label={t("addressDetails")}>
+              <Input
+                value={newLocation.address}
+                onChange={(e) => setNewLocation((f) => ({ ...f, address: e.target.value }))}
+              />
+            </Field>
+            <div className="grid grid-cols-2 gap-2">
+              <Field label={t("city")}>
+                <Input value={newLocation.city} onChange={(e) => setNewLocation((f) => ({ ...f, city: e.target.value }))} />
+              </Field>
+              <Field label={t("phone")}>
+                <Input
+                  type="tel"
+                  value={newLocation.phone}
+                  onChange={(e) => setNewLocation((f) => ({ ...f, phone: e.target.value }))}
+                />
+              </Field>
+            </div>
+            {locations && locations.length > 0 && (
+              <Button size="sm" variant="outline" onClick={() => setAddingLocation(false)}>
+                {t("back")}
+              </Button>
+            )}
+          </Card>
+        )}
+      </div>
+
+      <div className="space-y-2">
         <p className="text-xs font-medium text-muted-foreground">{t("paymentMethod")}</p>
         <p className="text-xs text-muted-foreground">{t("electronicOnlyNote")}</p>
 
@@ -305,7 +446,17 @@ function Checkout({ userId }: { userId: string }) {
         {t("securePayment")}
       </p>
 
-      <Button size="lg" className="w-full" onClick={pay} disabled={busy || !selectedCardId}>
+      <Button
+        size="lg"
+        className="w-full"
+        onClick={pay}
+        disabled={
+          busy ||
+          !selectedCardId ||
+          (!addingLocation && !selectedLocationId) ||
+          (addingLocation && (!newLocation.label.trim() || !newLocation.address.trim()))
+        }
+      >
         {busy ? <Spinner /> : t("payNow")}
       </Button>
     </Page>
