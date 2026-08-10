@@ -277,6 +277,42 @@ export type Database = {
           },
         ]
       }
+      delivery_locations: {
+        Row: {
+          id: string
+          user_id: string
+          label: string
+          address: string
+          city: string | null
+          phone: string | null
+          is_default: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          label: string
+          address: string
+          city?: string | null
+          phone?: string | null
+          is_default?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          label?: string
+          address?: string
+          city?: string | null
+          phone?: string | null
+          is_default?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
