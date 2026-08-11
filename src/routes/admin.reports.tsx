@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
-import { CalendarDays, Eye, FileText, Filter, Printer, Save, SlidersHorizontal } from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { CalendarDays, Eye, FileText, Filter, Printer, Save, SlidersHorizontal, Trash2 } from "lucide-react";
 import { Guard } from "@/components/Guard";
 import { Page } from "@/components/AppShell";
 import { Button, Card, Input } from "@/components/ui-kit";
@@ -26,7 +26,11 @@ const FIELDS: Record<(typeof REPORT_TYPES)[number], string[]> = {
 const money = (value: number) => value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const titleCase = (value: string) => value.replaceAll("_", " ").replace(/\b\w/g, (c) => c.toUpperCase());
 
+type ReportData = { rows: any[]; gross: number; supplierCommission: number; customerCommission: number; delivery: number; supplierPayouts: number; walletBalance: number; platformRevenue: number; disputeRows: any[]; supplierRows: any[]; customerCount: number };
+type SavedReport = { id: string; title: string; params: any; content: ReportData; created_at: string };
+
 function Body() {
+  const queryClient = useQueryClient();
   const [reportTypes, setReportTypes] = useState<(typeof REPORT_TYPES)[number][]>(["Financial"]);
   const [datePreset, setDatePreset] = useState<(typeof DATE_PRESETS)[number]>("This Month");
   const [from, setFrom] = useState("");
@@ -54,6 +58,15 @@ function Body() {
       const { data, error } = await supabase.from("supplier_profiles").select("user_id, company_name, verified, verification_status, completed_orders, response_rate").order("company_name");
       if (error) throw error;
       return data ?? [];
+    },
+  });
+  const { data: savedReports = [], isLoading: savedReportsLoading } = useQuery({
+    queryKey: ["admin-saved-reports"],
+    queryFn: async () => {
+      const db = supabase as any;
+      const { data, error } = await db.from("admin_saved_reports").select("id, title, params, content, created_at").order("created_at", { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as SavedReport[];
     },
   });
 
@@ -129,26 +142,44 @@ function Body() {
 
   const saveReport = async () => {
     if (!preview) return;
-    setSaved(false);
-    setError("");
+    setSaved(false); setError("");
     try {
       const { data: userData, error: userError } = await supabase.auth.getUser();
       if (userError) throw userError;
       const userId = userData.user?.id;
       if (!userId) throw new Error("You must be signed in to save a report.");
-
       const db = supabase as any;
-      const { error: saveError } = await db.from("reports").insert({
+      const { error: saveError } = await db.from("admin_saved_reports").insert({
         admin_id: userId,
-        supplier_id: null,
         title: `${reportTypes.join(" + ")} Report — ${datePreset}`,
         params: { reportTypes, datePreset, from, to, category, supplier, orderStatus, selectedFields },
         content: preview,
       });
       if (saveError) throw saveError;
       setSaved(true);
+      await queryClient.invalidateQueries({ queryKey: ["admin-saved-reports"] });
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not save the report.");
+    }
+  };
+
+  const openSavedReport = (report: SavedReport) => {
+    const p = report.params ?? {};
+    setReportTypes(p.reportTypes?.length ? p.reportTypes : ["Financial"]);
+    setDatePreset(p.datePreset ?? "This Month"); setFrom(p.from ?? ""); setTo(p.to ?? ""); setCategory(p.category ?? ""); setSupplier(p.supplier ?? ""); setOrderStatus(p.orderStatus ?? ""); setSelectedFields(p.selectedFields ?? []); setPreview(report.content ?? null); setSaved(true); setError("");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const deleteSavedReport = async (id: string) => {
+    if (!window.confirm("Delete this saved report?")) return;
+    setError("");
+    try {
+      const db = supabase as any;
+      const { error: deleteError } = await db.from("admin_saved_reports").delete().eq("id", id);
+      if (deleteError) throw deleteError;
+      await queryClient.invalidateQueries({ queryKey: ["admin-saved-reports"] });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not delete the report.");
     }
   };
 
@@ -172,11 +203,15 @@ function Body() {
         {reportTypes.includes("Customers") && <ReportSection title="Customers">{selectedFields.includes("Customer Count") && <Metric label="Customers" value={String(preview.customerCount)} />}{selectedFields.includes("Order Count") && <Metric label="Orders" value={String(preview.rows.length)} />}{selectedFields.includes("Total Spending") && <Metric label="Total Spending" value={money(preview.gross + preview.customerCommission)} />}{selectedFields.includes("Average Order Value") && <Metric label="Average Order Value" value={money(preview.rows.length ? preview.gross / preview.rows.length : 0)} />}{selectedFields.includes("Delivery Preferences") && <Detail label="Delivery fees in selected orders" value={money(preview.delivery)} />}</ReportSection>}
         {reportTypes.includes("Disputes") && <ReportSection title="Disputes">{selectedFields.includes("Dispute Count") && <Metric label="Disputes" value={String(preview.disputeRows.length)} />}{selectedFields.includes("Open Disputes") && <Metric label="Open" value={String(preview.disputeRows.filter((d) => d.status === "open").length)} />}{selectedFields.includes("Resolved Disputes") && <Metric label="Resolved" value={String(preview.disputeRows.filter((d) => d.status === "resolved").length)} />}{selectedFields.includes("Categories") && <Detail label="Categories" value={Array.from(new Set(preview.disputeRows.map((d) => d.category))).join(", ") || "None"} />}{selectedFields.includes("Resolution Actions") && <Detail label="Resolution actions" value={Array.from(new Set(preview.disputeRows.map((d) => d.resolution_action).filter(Boolean))).map(titleCase).join(", ") || "None"} />}{selectedFields.includes("Resolution Time") && <Detail label="Resolved disputes" value={`${preview.disputeRows.filter((d) => d.resolved_at).length} with resolution date`} />}</ReportSection>}
       </Card>}
+
+      <Card className="mt-5 print:hidden">
+        <div className="flex items-start justify-between gap-3 border-b pb-3"><div><h2 className="font-display font-semibold">Saved Reports</h2><p className="text-xs text-muted-foreground">Reports saved to your admin account. They remain available after logout and on other devices.</p></div><span className="rounded-full bg-muted px-2.5 py-1 text-xs">{savedReports.length}</span></div>
+        <div className="divide-y">{savedReportsLoading ? <p className="py-5 text-sm text-muted-foreground">Loading saved reports…</p> : savedReports.length === 0 ? <p className="py-5 text-sm text-muted-foreground">No saved reports yet.</p> : savedReports.map((report) => <div key={report.id} className="flex items-center justify-between gap-3 py-3"><div className="min-w-0"><p className="truncate text-sm font-medium">{report.title}</p><p className="text-xs text-muted-foreground">{new Date(report.created_at).toLocaleString()}</p></div><div className="flex shrink-0 gap-2"><Button variant="outline" size="sm" onClick={() => openSavedReport(report)}>Open</Button><Button variant="ghost" size="icon" aria-label="Delete report" onClick={() => deleteSavedReport(report.id)}><Trash2 className="size-4 text-destructive" /></Button></div></div>)}</div>
+      </Card>
     </Page>
   );
 }
 
-type ReportData = { rows: any[]; gross: number; supplierCommission: number; customerCommission: number; delivery: number; supplierPayouts: number; walletBalance: number; platformRevenue: number; disputeRows: any[]; supplierRows: any[]; customerCount: number };
 function ReportSection({ title, children }: { title: string; children: ReactNode }) { return <section className="mt-6 space-y-3"><h2 className="border-b pb-2 font-display text-base font-semibold">{title}</h2><div className="grid gap-3 sm:grid-cols-3">{children}</div></section>; }
 function Metric({ label, value }: { label: string; value: string }) { return <div className="rounded-xl border bg-muted/20 p-4"><div className="text-xs text-muted-foreground">{label}</div><div className="mt-1 font-display text-xl font-bold">{value}</div></div>; }
 function Detail({ label, value }: { label: string; value: string }) { return <div className="rounded-xl border p-3 text-sm"><span className="text-muted-foreground">{label}</span><strong className="float-right">{value}</strong></div>; }
