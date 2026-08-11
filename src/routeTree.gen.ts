@@ -16,6 +16,7 @@ import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as AdminDisputesRouteImport } from './routes/admin.disputes'
 import { Route as AdminOrdersRouteImport } from './routes/admin.orders'
+import { Route as AdminReportsRouteImport } from './routes/admin.reports'
 import { Route as AdminSuppliersRouteImport } from './routes/admin.suppliers'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
 import { Route as CheckoutOfferIdRouteImport } from './routes/checkout.$offerId'
@@ -31,6 +32,7 @@ import { Route as SupplierOffersRouteImport } from './routes/supplier.offers'
 import { Route as SupplierOrdersRouteImport } from './routes/supplier.orders'
 import { Route as SupplierProfileRouteImport } from './routes/supplier.profile'
 import { Route as SupplierOfferRequestIdRouteImport } from './routes/supplier.offer.$requestId'
+import { Route as SuppliersSupplierIdReviewsRouteImport } from './routes/suppliers.$supplierId.reviews'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -65,6 +67,11 @@ const AdminDisputesRoute = AdminDisputesRouteImport.update({
 const AdminOrdersRoute = AdminOrdersRouteImport.update({
   id: '/admin/orders',
   path: '/admin/orders',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminReportsRoute = AdminReportsRouteImport.update({
+  id: '/admin/reports',
+  path: '/admin/reports',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminSuppliersRoute = AdminSuppliersRouteImport.update({
@@ -142,6 +149,12 @@ const SupplierOfferRequestIdRoute = SupplierOfferRequestIdRouteImport.update({
   path: '/supplier/offer/$requestId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SuppliersSupplierIdReviewsRoute =
+  SuppliersSupplierIdReviewsRouteImport.update({
+    id: '/suppliers/$supplierId/reviews',
+    path: '/suppliers/$supplierId/reviews',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -150,6 +163,7 @@ export interface FileRoutesByFullPath {
   '/profile': typeof ProfileRoute
   '/admin/disputes': typeof AdminDisputesRoute
   '/admin/orders': typeof AdminOrdersRoute
+  '/admin/reports': typeof AdminReportsRoute
   '/admin/suppliers': typeof AdminSuppliersRoute
   '/api/chat': typeof ApiChatRoute
   '/checkout/$offerId': typeof CheckoutOfferIdRoute
@@ -166,6 +180,7 @@ export interface FileRoutesByFullPath {
   '/requests/': typeof RequestsIndexRoute
   '/supplier/': typeof SupplierIndexRoute
   '/supplier/offer/$requestId': typeof SupplierOfferRequestIdRoute
+  '/suppliers/$supplierId/reviews': typeof SuppliersSupplierIdReviewsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -174,6 +189,7 @@ export interface FileRoutesByTo {
   '/profile': typeof ProfileRoute
   '/admin/disputes': typeof AdminDisputesRoute
   '/admin/orders': typeof AdminOrdersRoute
+  '/admin/reports': typeof AdminReportsRoute
   '/admin/suppliers': typeof AdminSuppliersRoute
   '/api/chat': typeof ApiChatRoute
   '/checkout/$offerId': typeof CheckoutOfferIdRoute
@@ -190,6 +206,7 @@ export interface FileRoutesByTo {
   '/requests': typeof RequestsIndexRoute
   '/supplier': typeof SupplierIndexRoute
   '/supplier/offer/$requestId': typeof SupplierOfferRequestIdRoute
+  '/suppliers/$supplierId/reviews': typeof SuppliersSupplierIdReviewsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -199,6 +216,7 @@ export interface FileRoutesById {
   '/profile': typeof ProfileRoute
   '/admin/disputes': typeof AdminDisputesRoute
   '/admin/orders': typeof AdminOrdersRoute
+  '/admin/reports': typeof AdminReportsRoute
   '/admin/suppliers': typeof AdminSuppliersRoute
   '/api/chat': typeof ApiChatRoute
   '/checkout/$offerId': typeof CheckoutOfferIdRoute
@@ -215,6 +233,7 @@ export interface FileRoutesById {
   '/requests/': typeof RequestsIndexRoute
   '/supplier/': typeof SupplierIndexRoute
   '/supplier/offer/$requestId': typeof SupplierOfferRequestIdRoute
+  '/suppliers/$supplierId/reviews': typeof SuppliersSupplierIdReviewsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -225,6 +244,7 @@ export interface FileRouteTypes {
     | '/profile'
     | '/admin/disputes'
     | '/admin/orders'
+    | '/admin/reports'
     | '/admin/suppliers'
     | '/api/chat'
     | '/checkout/$offerId'
@@ -241,6 +261,7 @@ export interface FileRouteTypes {
     | '/requests/'
     | '/supplier/'
     | '/supplier/offer/$requestId'
+    | '/suppliers/$supplierId/reviews'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -249,6 +270,7 @@ export interface FileRouteTypes {
     | '/profile'
     | '/admin/disputes'
     | '/admin/orders'
+    | '/admin/reports'
     | '/admin/suppliers'
     | '/api/chat'
     | '/checkout/$offerId'
@@ -265,6 +287,7 @@ export interface FileRouteTypes {
     | '/requests'
     | '/supplier'
     | '/supplier/offer/$requestId'
+    | '/suppliers/$supplierId/reviews'
   id:
     | '__root__'
     | '/'
@@ -273,6 +296,7 @@ export interface FileRouteTypes {
     | '/profile'
     | '/admin/disputes'
     | '/admin/orders'
+    | '/admin/reports'
     | '/admin/suppliers'
     | '/api/chat'
     | '/checkout/$offerId'
@@ -289,6 +313,7 @@ export interface FileRouteTypes {
     | '/requests/'
     | '/supplier/'
     | '/supplier/offer/$requestId'
+    | '/suppliers/$supplierId/reviews'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -298,6 +323,7 @@ export interface RootRouteChildren {
   ProfileRoute: typeof ProfileRoute
   AdminDisputesRoute: typeof AdminDisputesRoute
   AdminOrdersRoute: typeof AdminOrdersRoute
+  AdminReportsRoute: typeof AdminReportsRoute
   AdminSuppliersRoute: typeof AdminSuppliersRoute
   ApiChatRoute: typeof ApiChatRoute
   CheckoutOfferIdRoute: typeof CheckoutOfferIdRoute
@@ -314,6 +340,7 @@ export interface RootRouteChildren {
   RequestsIndexRoute: typeof RequestsIndexRoute
   SupplierIndexRoute: typeof SupplierIndexRoute
   SupplierOfferRequestIdRoute: typeof SupplierOfferRequestIdRoute
+  SuppliersSupplierIdReviewsRoute: typeof SuppliersSupplierIdReviewsRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -365,6 +392,13 @@ declare module '@tanstack/react-router' {
       path: '/admin/orders'
       fullPath: '/admin/orders'
       preLoaderRoute: typeof AdminOrdersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/reports': {
+      id: '/admin/reports'
+      path: '/admin/reports'
+      fullPath: '/admin/reports'
+      preLoaderRoute: typeof AdminReportsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin/suppliers': {
@@ -472,6 +506,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SupplierOfferRequestIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/suppliers/$supplierId/reviews': {
+      id: '/suppliers/$supplierId/reviews'
+      path: '/suppliers/$supplierId/reviews'
+      fullPath: '/suppliers/$supplierId/reviews'
+      preLoaderRoute: typeof SuppliersSupplierIdReviewsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -482,6 +523,7 @@ const rootRouteChildren: RootRouteChildren = {
   ProfileRoute: ProfileRoute,
   AdminDisputesRoute: AdminDisputesRoute,
   AdminOrdersRoute: AdminOrdersRoute,
+  AdminReportsRoute: AdminReportsRoute,
   AdminSuppliersRoute: AdminSuppliersRoute,
   ApiChatRoute: ApiChatRoute,
   CheckoutOfferIdRoute: CheckoutOfferIdRoute,
@@ -498,6 +540,7 @@ const rootRouteChildren: RootRouteChildren = {
   RequestsIndexRoute: RequestsIndexRoute,
   SupplierIndexRoute: SupplierIndexRoute,
   SupplierOfferRequestIdRoute: SupplierOfferRequestIdRoute,
+  SuppliersSupplierIdReviewsRoute: SuppliersSupplierIdReviewsRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

@@ -42,8 +42,20 @@ export function Button({ className, variant = "primary", size = "md", ...props }
   );
 }
 
-export function Card({ className, children }: { className?: string; children: ReactNode }) {
-  return <div className={cn("surface p-4", className)}>{children}</div>;
+export function Card({
+  className,
+  children,
+  id,
+}: {
+  className?: string;
+  children: ReactNode;
+  id?: string;
+}) {
+  return (
+    <div id={id} className={cn("surface p-4", className)}>
+      {children}
+    </div>
+  );
 }
 
 export function Input({

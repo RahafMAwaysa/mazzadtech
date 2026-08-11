@@ -649,6 +649,42 @@ export type Database = {
         }
         Relationships: []
       }
+      admin_reports: {
+        Row: {
+          id: string
+          admin_id: string
+          title: string
+          report_types: Json
+          filters: Json
+          selected_fields: Json
+          report_data: Json
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          admin_id: string
+          title: string
+          report_types?: Json
+          filters?: Json
+          selected_fields?: Json
+          report_data?: Json
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          admin_id?: string
+          title?: string
+          report_types?: Json
+          filters?: Json
+          selected_fields?: Json
+          report_data?: Json
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       reports: {
         Row: {
           id: string
@@ -802,6 +838,24 @@ export type Database = {
         Args: { _dispute_id: string; _action: string; _note: string }
         Returns: undefined
       }
+      confirm_order_receipt: {
+        Args: { _order_id: string }
+        Returns: undefined
+      }
+      get_supplier_reviews: {
+        Args: { _supplier_id: string }
+        Returns: {
+          id: string
+          stars: number
+          comment: string | null
+          created_at: string
+          reviewer_name: string | null
+        }[]
+      }
+      get_supplier_review_counts: {
+        Args: { _supplier_ids: string[] }
+        Returns: { supplier_id: string; review_count: number }[]
+      }
     }
     Enums: {
       app_role: "customer" | "supplier" | "admin" | "delivery"
@@ -815,6 +869,7 @@ export type Database = {
         | "cancelled"
         | "received_from_supplier"
         | "in_transit"
+        | "completed"
       request_status: "draft" | "open" | "awarded" | "closed"
     }
     CompositeTypes: {
@@ -954,6 +1009,7 @@ export const Constants = {
         "cancelled",
         "received_from_supplier",
         "in_transit",
+        "completed",
       ],
       request_status: ["draft", "open", "awarded", "closed"],
     },
