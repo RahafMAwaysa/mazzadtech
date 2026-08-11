@@ -30,25 +30,27 @@ function Body() {
   const { data, isLoading, error } = useQuery({
     queryKey: ["admin-financial-report"],
     queryFn: async () => {
-      const [ordersResult, walletResult] = await Promise.all([
+      const [ordersResult, walletResult, walletTransactionsResult] = await Promise.all([
         supabase
           .from("orders")
           .select("order_number, amount, commission, customer_commission, delivery_fee, payment_status, created_at")
           .eq("payment_status", "paid")
           .order("created_at", { ascending: false }),
         supabase.from("wallets").select("balance"),
+        supabase.from("wallet_transactions").select("amount, type").eq("type", "credit"),
       ]);
 
       if (ordersResult.error) throw ordersResult.error;
       if (walletResult.error) throw walletResult.error;
+      if (walletTransactionsResult.error) throw walletTransactionsResult.error;
 
       const orders = (ordersResult.data ?? []) as ReportOrder[];
       const grossSales = orders.reduce((sum, order) => sum + Number(order.amount ?? 0), 0);
       const supplierCommission = orders.reduce((sum, order) => sum + Number(order.commission ?? 0), 0);
       const customerCommission = orders.reduce((sum, order) => sum + Number(order.customer_commission ?? 0), 0);
       const deliveryFees = orders.reduce((sum, order) => sum + Number(order.delivery_fee ?? 0), 0);
-      const supplierPayouts = orders.reduce(
-        (sum, order) => sum + Number(order.amount ?? 0) - Number(order.commission ?? 0),
+      const supplierPayouts = (walletTransactionsResult.data ?? []).reduce(
+        (sum, transaction) => sum + Number(transaction.amount ?? 0),
         0,
       );
       const supplierWalletBalance = (walletResult.data ?? []).reduce(
@@ -86,6 +88,7 @@ function Body() {
   }
 
   const money = (value: number) => `${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const percent = (value: number) => `${(value * 100).toLocaleString(undefined, { maximumFractionDigits: 2 })}%`;
 
   return (
     <Page title="Financial Report">
@@ -127,8 +130,8 @@ function Body() {
                   <span className="font-semibold">{money(Number(order.amount))}</span>
                 </div>
                 <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                  <span>Supplier commission: {money(Number(order.commission))}</span>
-                  <span>Customer commission: {money(Number(order.customer_commission))}</span>
+                  <span>Supplier commission: {money(Number(order.commission))} ({percent(Number(order.commission) / Number(order.amount || 1))})</span>
+                  <span>Customer commission: {money(Number(order.customer_commission))} ({percent(Number(order.customer_commission) / Number(order.amount || 1))})</span>
                   <span>Delivery: {money(Number(order.delivery_fee))}</span>
                 </div>
               </div>
