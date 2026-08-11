@@ -35,7 +35,7 @@ function routeForRoles(roles: string[]) {
   return roles.includes("admin")
     ? "/admin"
     : roles.includes("supplier")
-      ? "/supplier"
+      ? "/supplier/auctions"
       : roles.includes("delivery")
         ? "/delivery"
         : "/";
@@ -59,9 +59,6 @@ function AuthPage() {
 
   const needsCompany = role === "supplier" || role === "delivery";
 
-  // Handles the round trip back from Google/Apple: if the person picked a
-  // role/company before leaving, apply it now that we have a session, then
-  // route to the right dashboard. Runs once on mount.
   useEffect(() => {
     void (async () => {
       const { data } = await supabase.auth.getSession();
@@ -82,7 +79,7 @@ function AuthPage() {
       try {
         roles = (await ensureAccount()).roles;
       } catch {
-        return; // not actually signed in yet / mid-OAuth flow
+        return;
       }
       navigate({ to: routeForRoles(roles) });
     })();
@@ -131,11 +128,7 @@ function AuthPage() {
   const verifyOtp = async () => {
     setBusy(true);
     try {
-      const { error } = await supabase.auth.verifyOtp({
-        phone: phone.trim(),
-        token: otpCode.trim(),
-        type: "sms",
-      });
+      const { error } = await supabase.auth.verifyOtp({ phone: phone.trim(), token: otpCode.trim(), type: "sms" });
       if (error) throw error;
       let roles: string[] = [];
       try {
@@ -158,8 +151,6 @@ function AuthPage() {
       if (mode === "in") {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
-        // Backfills the profile/role records for accounts created before the
-        // role bootstrap existed, then routes by the role actually stored.
         let stored: string[] = [];
         try {
           const res = await ensureAccount();
@@ -170,14 +161,7 @@ function AuthPage() {
         if (adminMode && !stored.includes("admin")) {
           toast.error(t("notAnAdmin"));
         }
-        const target = stored.includes("admin")
-          ? "/admin"
-          : stored.includes("supplier")
-            ? "/supplier"
-            : stored.includes("delivery")
-              ? "/delivery"
-              : "/";
-        navigate({ to: target });
+        navigate({ to: routeForRoles(stored) });
       } else {
         const { error } = await supabase.auth.signUp({
           email,
@@ -223,14 +207,7 @@ function AuthPage() {
           )}
           <div className={`grid-cols-2 rounded-xl bg-muted p-1 text-sm ${adminMode ? "hidden" : "grid"}`}>
             {(["in", "up"] as const).map((m) => (
-              <button
-                key={m}
-                type="button"
-                onClick={() => setMode(m)}
-                className={`rounded-lg py-2 font-medium transition-colors ${
-                  mode === m ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"
-                }`}
-              >
+              <button key={m} type="button" onClick={() => setMode(m)} className={`rounded-lg py-2 font-medium transition-colors ${mode === m ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"}`}>
                 {m === "in" ? t("signIn") : t("signUp")}
               </button>
             ))}
@@ -242,21 +219,8 @@ function AuthPage() {
                 <Field label={t("iAmA")}>
                   <div className="grid grid-cols-3 gap-2">
                     {ROLES.map((r) => (
-                      <button
-                        key={r}
-                        type="button"
-                        onClick={() => setRole(r)}
-                        className={`h-11 rounded-xl border px-1 text-xs font-medium transition-colors ${
-                          role === r
-                            ? "border-primary bg-primary-soft text-primary"
-                            : "border-border bg-card text-muted-foreground"
-                        }`}
-                      >
-                        {r === "customer"
-                          ? t("customer")
-                          : r === "supplier"
-                            ? t("supplier")
-                            : t("deliveryCompany")}
+                      <button key={r} type="button" onClick={() => setRole(r)} className={`h-11 rounded-xl border px-1 text-xs font-medium transition-colors ${role === r ? "border-primary bg-primary-soft text-primary" : "border-border bg-card text-muted-foreground"}`}>
+                        {r === "customer" ? t("customer") : r === "supplier" ? t("supplier") : t("deliveryCompany")}
                       </button>
                     ))}
                   </div>
@@ -280,19 +244,11 @@ function AuthPage() {
             {!adminMode && (
               <>
                 <div className="grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => void oauthSignIn("google")}
-                    className="flex h-11 items-center justify-center gap-2 rounded-xl border border-border bg-card text-sm font-medium"
-                  >
+                  <button type="button" onClick={() => void oauthSignIn("google")} className="flex h-11 items-center justify-center gap-2 rounded-xl border border-border bg-card text-sm font-medium">
                     <GoogleIcon />
                     Google
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => void oauthSignIn("apple")}
-                    className="flex h-11 items-center justify-center gap-2 rounded-xl border border-border bg-card text-sm font-medium"
-                  >
+                  <button type="button" onClick={() => void oauthSignIn("apple")} className="flex h-11 items-center justify-center gap-2 rounded-xl border border-border bg-card text-sm font-medium">
                     <AppleIcon />
                     Apple
                   </button>
@@ -305,25 +261,10 @@ function AuthPage() {
                 </div>
 
                 <div className="grid grid-cols-2 gap-1 rounded-xl bg-muted p-1 text-xs">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setAuthMethod("password");
-                      setOtpSent(false);
-                    }}
-                    className={`rounded-lg py-1.5 font-medium transition-colors ${
-                      authMethod === "password" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"
-                    }`}
-                  >
+                  <button type="button" onClick={() => { setAuthMethod("password"); setOtpSent(false); }} className={`rounded-lg py-1.5 font-medium transition-colors ${authMethod === "password" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"}`}>
                     {t("email")}
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => setAuthMethod("phone")}
-                    className={`flex items-center justify-center gap-1.5 rounded-lg py-1.5 font-medium transition-colors ${
-                      authMethod === "phone" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"
-                    }`}
-                  >
+                  <button type="button" onClick={() => setAuthMethod("phone")} className={`flex items-center justify-center gap-1.5 rounded-lg py-1.5 font-medium transition-colors ${authMethod === "phone" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"}`}>
                     <Smartphone className="size-3.5" />
                     {t("phone")}
                   </button>
@@ -334,44 +275,18 @@ function AuthPage() {
             {authMethod === "phone" && !adminMode ? (
               <div className="space-y-3">
                 <Field label={t("phone")}>
-                  <Input
-                    type="tel"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    placeholder="+970 5X XXX XXXX"
-                    disabled={otpSent}
-                    autoComplete="tel"
-                  />
+                  <Input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+970 5X XXX XXXX" disabled={otpSent} autoComplete="tel" />
                 </Field>
                 {otpSent && (
                   <Field label={t("otpCode")}>
-                    <Input
-                      inputMode="numeric"
-                      value={otpCode}
-                      onChange={(e) => setOtpCode(e.target.value)}
-                      placeholder="123456"
-                      autoFocus
-                    />
+                    <Input inputMode="numeric" value={otpCode} onChange={(e) => setOtpCode(e.target.value)} placeholder="123456" autoFocus />
                   </Field>
                 )}
-                <Button
-                  type="button"
-                  size="lg"
-                  className="w-full"
-                  disabled={busy}
-                  onClick={() => void (otpSent ? verifyOtp() : sendOtp())}
-                >
+                <Button type="button" size="lg" className="w-full" disabled={busy} onClick={() => void (otpSent ? verifyOtp() : sendOtp())}>
                   {busy ? <Spinner /> : otpSent ? t("verifyCode") : t("sendCode")}
                 </Button>
                 {otpSent && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setOtpSent(false);
-                      setOtpCode("");
-                    }}
-                    className="mx-auto block text-xs text-muted-foreground underline"
-                  >
+                  <button type="button" onClick={() => { setOtpSent(false); setOtpCode(""); }} className="mx-auto block text-xs text-muted-foreground underline">
                     {t("changePhoneNumber")}
                   </button>
                 )}
@@ -379,23 +294,10 @@ function AuthPage() {
             ) : (
               <>
                 <Field label={t("email")}>
-                  <Input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                    autoComplete="email"
-                  />
+                  <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="email" />
                 </Field>
                 <Field label={t("password")}>
-                  <Input
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    minLength={6}
-                    autoComplete={mode === "in" ? "current-password" : "new-password"}
-                  />
+                  <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} autoComplete={mode === "in" ? "current-password" : "new-password"} />
                 </Field>
                 <Button type="submit" size="lg" className="w-full" disabled={busy}>
                   {busy ? <Spinner /> : mode === "in" ? t("signIn") : t("signUp")}
@@ -405,15 +307,7 @@ function AuthPage() {
           </form>
         </Card>
 
-        <button
-          type="button"
-          onClick={() => {
-            setAdminMode((v) => !v);
-            setMode("in");
-            setAuthMethod("password");
-          }}
-          className="mx-auto mt-4 flex items-center gap-2 rounded-xl border border-border bg-card px-4 py-2 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
-        >
+        <button type="button" onClick={() => { setAdminMode((v) => !v); setMode("in"); setAuthMethod("password"); }} className="mx-auto mt-4 flex items-center gap-2 rounded-xl border border-border bg-card px-4 py-2 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground">
           <ShieldCheck className="size-4" />
           {adminMode ? t("backToNormalSignIn") : t("adminPortal")}
         </button>
