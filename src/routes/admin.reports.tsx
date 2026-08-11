@@ -5,7 +5,7 @@ import { Guard } from "@/components/Guard";
 import { Page } from "@/components/AppShell";
 import { Button, Card, Input } from "@/components/ui-kit";
 import { supabase } from "@/integrations/supabase/client";
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 
 export const Route = createFileRoute("/admin/reports")({
   head: () => ({ meta: [{ title: "Reports — MazzadTech" }, { name: "description", content: "Create, preview and save custom platform reports." }] }),
@@ -110,7 +110,6 @@ function Body() {
       }
 
       const walletRows = wallets ?? [];
-      const walletById = new Map(walletRows.map((w) => [w.id, w]));
       const rowIds = new Set(rows.map((o) => o.id));
       const credits = (walletTransactions ?? []).filter((t) => t.type === "credit" && t.order_id && rowIds.has(t.order_id));
       const gross = rows.reduce((s, o) => s + Number(o.amount || 0), 0);
@@ -122,7 +121,7 @@ function Body() {
       const customerIds = new Set(rows.map((o) => o.customer_id));
       const disputeRows = (disputes ?? []).filter((d) => rowIds.has(d.order_id));
       const supplierRows = (suppliers ?? []).filter((s) => !supplier || s.user_id === supplier);
-      setPreview({ rows, gross, supplierCommission, customerCommission, delivery, supplierPayouts, walletBalance, platformRevenue: supplierCommission + customerCommission, disputeRows, supplierRows, customerCount: customerIds.size, credits, walletById });
+      setPreview({ rows, gross, supplierCommission, customerCommission, delivery, supplierPayouts, walletBalance, platformRevenue: supplierCommission + customerCommission, disputeRows, supplierRows, customerCount: customerIds.size });
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not build the report preview.");
     } finally { setLoading(false); }
@@ -150,26 +149,18 @@ function Body() {
 
       {preview && <Card className="mt-5 border-primary/30 print:border-0 print:shadow-none" id="report-preview">
         <div className="flex items-start justify-between gap-4 border-b pb-4"><div><div className="text-lg font-display font-bold">MazzadTech</div><div className="flex items-center gap-2 font-display font-semibold"><Eye className="size-5 text-primary print:hidden" />Report Preview</div><p className="text-xs text-muted-foreground">{reportTypes.join(" + ")} · {datePreset === "Custom" ? `${from || "—"} → ${to || "—"}` : datePreset} · Generated {new Date().toLocaleString()}</p></div><div className="print:hidden flex gap-2"><Button variant="outline" size="sm" onClick={saveReport}><Save className="mr-1 size-4" />{saved ? "Saved" : "Save"}</Button><Button size="sm" onClick={() => window.print()}><Printer className="mr-1 size-4" />Download PDF</Button></div></div>
-
         {reportTypes.includes("Financial") && <ReportSection title="Financial">{selectedFields.includes("Gross Sales") && <Metric label="Gross Sales" value={money(preview.gross)} />}{selectedFields.includes("Platform Revenue") && <Metric label="Platform Revenue" value={money(preview.platformRevenue)} />}{selectedFields.includes("Supplier Payouts") && <Metric label="Supplier Payouts" value={money(preview.supplierPayouts)} />}{selectedFields.includes("Supplier Wallet Balance") && <Metric label="Supplier Wallet Balance" value={money(preview.walletBalance)} />}{selectedFields.includes("Delivery Fees") && <Metric label="Delivery Fees" value={money(preview.delivery)} />}{selectedFields.includes("Commissions") && <Metric label="Total Commissions" value={money(preview.supplierCommission + preview.customerCommission)} />}{selectedFields.includes("Commissions") && <div className="col-span-full grid gap-2 sm:grid-cols-2"><Detail label="Supplier commission" value={money(preview.supplierCommission)} /><Detail label="Customer commission" value={money(preview.customerCommission)} /></div>}</ReportSection>}
-
-        {reportTypes.includes("Orders") && <ReportSection title="Orders">{selectedFields.includes("Order Count") && <Metric label="Paid Orders" value={String(preview.rows.length)} />}{selectedFields.includes("Order Value") && <Metric label="Order Value" value={money(preview.gross)} />}{selectedFields.includes("Order Status") && <Detail label="Status filter" value={orderStatus ? titleCase(orderStatus) : "All"} />}{selectedFields.includes("Order Details") || selectedFields.includes("Order Count") ? <OrderTable rows={preview.rows} /> : null}</ReportSection>}
-
+        {reportTypes.includes("Orders") && <ReportSection title="Orders">{selectedFields.includes("Order Count") && <Metric label="Paid Orders" value={String(preview.rows.length)} />}{selectedFields.includes("Order Value") && <Metric label="Order Value" value={money(preview.gross)} />}{selectedFields.includes("Order Status") && <Detail label="Status filter" value={orderStatus ? titleCase(orderStatus) : "All"} />}{selectedFields.includes("Supplier") && <Detail label="Supplier filter" value={supplier ? (suppliers?.find((s) => s.user_id === supplier)?.company_name || "Selected") : "All suppliers"} />}{selectedFields.includes("Category") && <Detail label="Category filter" value={category || "All categories"} />}{selectedFields.includes("Payment Status") && <Detail label="Payment status" value="Paid" />}{selectedFields.includes("Created Date") && <Detail label="Date range" value={datePreset} />}{(selectedFields.includes("Order Details") || selectedFields.includes("Order Count")) && <OrderTable rows={preview.rows} />}</ReportSection>}
         {reportTypes.includes("Suppliers") && <ReportSection title="Suppliers">{selectedFields.includes("Supplier Count") && <Metric label="Suppliers" value={String(preview.supplierRows.length)} />}{selectedFields.includes("Verified Suppliers") && <Metric label="Verified" value={String(preview.supplierRows.filter((s) => s.verified).length)} />}{selectedFields.includes("Pending Verification") && <Metric label="Pending" value={String(preview.supplierRows.filter((s) => s.verification_status !== "verified").length)} />}{selectedFields.includes("Wallet Balance") && <Metric label="Wallet Balance" value={money(preview.walletBalance)} />}{selectedFields.includes("Completed Orders") && <Metric label="Completed Orders" value={String(preview.supplierRows.reduce((s, x) => s + Number(x.completed_orders || 0), 0))} />}{selectedFields.includes("Response Rate") && <Metric label="Avg Response Rate" value={preview.supplierRows.length ? `${Math.round(preview.supplierRows.reduce((s, x) => s + Number(x.response_rate || 0), 0) / preview.supplierRows.length)}%` : "0%"} />}</ReportSection>}
-
         {reportTypes.includes("Customers") && <ReportSection title="Customers">{selectedFields.includes("Customer Count") && <Metric label="Customers" value={String(preview.customerCount)} />}{selectedFields.includes("Order Count") && <Metric label="Orders" value={String(preview.rows.length)} />}{selectedFields.includes("Total Spending") && <Metric label="Total Spending" value={money(preview.gross + preview.customerCommission)} />}{selectedFields.includes("Average Order Value") && <Metric label="Average Order Value" value={money(preview.rows.length ? preview.gross / preview.rows.length : 0)} />}{selectedFields.includes("Delivery Preferences") && <Detail label="Delivery fees in selected orders" value={money(preview.delivery)} />}</ReportSection>}
-
         {reportTypes.includes("Disputes") && <ReportSection title="Disputes">{selectedFields.includes("Dispute Count") && <Metric label="Disputes" value={String(preview.disputeRows.length)} />}{selectedFields.includes("Open Disputes") && <Metric label="Open" value={String(preview.disputeRows.filter((d) => d.status === "open").length)} />}{selectedFields.includes("Resolved Disputes") && <Metric label="Resolved" value={String(preview.disputeRows.filter((d) => d.status === "resolved").length)} />}{selectedFields.includes("Categories") && <Detail label="Categories" value={Array.from(new Set(preview.disputeRows.map((d) => d.category))).join(", ") || "None"} />}{selectedFields.includes("Resolution Actions") && <Detail label="Resolution actions" value={Array.from(new Set(preview.disputeRows.map((d) => d.resolution_action).filter(Boolean))).map(titleCase).join(", ") || "None"} />}{selectedFields.includes("Resolution Time") && <Detail label="Resolved disputes" value={`${preview.disputeRows.filter((d) => d.resolved_at).length} with resolution date`} />}</ReportSection>}
       </Card>}
     </Page>
   );
 }
 
-type ReportData = {
-  rows: any[]; gross: number; supplierCommission: number; customerCommission: number; delivery: number; supplierPayouts: number; walletBalance: number; platformRevenue: number; disputeRows: any[]; supplierRows: any[]; customerCount: number; credits: any[]; walletById: Map<string, any>;
-};
-
-function ReportSection({ title, children }: { title: string; children: React.ReactNode }) { return <section className="mt-6 space-y-3"><h2 className="border-b pb-2 font-display text-base font-semibold">{title}</h2><div className="grid gap-3 sm:grid-cols-3">{children}</div></section>; }
+type ReportData = { rows: any[]; gross: number; supplierCommission: number; customerCommission: number; delivery: number; supplierPayouts: number; walletBalance: number; platformRevenue: number; disputeRows: any[]; supplierRows: any[]; customerCount: number };
+function ReportSection({ title, children }: { title: string; children: ReactNode }) { return <section className="mt-6 space-y-3"><h2 className="border-b pb-2 font-display text-base font-semibold">{title}</h2><div className="grid gap-3 sm:grid-cols-3">{children}</div></section>; }
 function Metric({ label, value }: { label: string; value: string }) { return <div className="rounded-xl border bg-muted/20 p-4"><div className="text-xs text-muted-foreground">{label}</div><div className="mt-1 font-display text-xl font-bold">{value}</div></div>; }
 function Detail({ label, value }: { label: string; value: string }) { return <div className="rounded-xl border p-3 text-sm"><span className="text-muted-foreground">{label}</span><strong className="float-right">{value}</strong></div>; }
 function OrderTable({ rows }: { rows: any[] }) { return <div className="col-span-full overflow-x-auto rounded-xl border"><table className="w-full text-left text-sm"><thead><tr className="border-b bg-muted/30"><th className="p-3">Order</th><th className="p-3">Amount</th><th className="p-3">Status</th><th className="p-3">Payment</th><th className="p-3">Date</th></tr></thead><tbody>{rows.map((o) => <tr key={o.id} className="border-b last:border-0"><td className="p-3 font-medium">{o.order_number}</td><td className="p-3">{money(Number(o.amount || 0))}</td><td className="p-3">{titleCase(o.status)}</td><td className="p-3">{titleCase(o.payment_status)}</td><td className="p-3">{new Date(o.created_at).toLocaleDateString()}</td></tr>)}{!rows.length && <tr><td colSpan={5} className="p-6 text-center text-muted-foreground">No paid orders match the selected filters.</td></tr>}</tbody></table></div>; }
