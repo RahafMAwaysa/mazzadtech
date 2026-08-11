@@ -115,7 +115,6 @@ function OfferForm({ userId }: { userId: string }) {
     }
   };
 
-  const budgetMin = request?.budget_min != null ? Number(request.budget_min) : 0;
   const budgetMax = request?.budget_max != null ? Number(request.budget_max) : null;
   const price = Number(form.price || 0);
 
@@ -125,8 +124,8 @@ function OfferForm({ userId }: { userId: string }) {
       setPriceError(`${t("priceExceedsBudget")} (${budgetMax.toLocaleString()} ${t("currency")})`);
       return false;
     }
-    if (budgetMin > 0 && nextPrice < budgetMin) {
-      setPriceError(`Price must be at least ${budgetMin.toLocaleString()} ${t("currency")}`);
+    if (nextPrice < 0) {
+      setPriceError("Price cannot be negative");
       return false;
     }
     setPriceError(null);
@@ -240,10 +239,10 @@ function OfferForm({ userId }: { userId: string }) {
         <div className="grid grid-cols-3 gap-3">
           <Field label={`${t("price")} (${t("currency")})`}>
             <div className="space-y-2">
-              {budgetMax !== null ? (
+              {budgetMax !== null && budgetMax > 0 ? (
                 <>
-                  <input type="range" min={budgetMin} max={budgetMax} step={1} value={Math.min(Math.max(price || budgetMin, budgetMin), budgetMax)} onChange={(e) => { const v = e.target.value; setForm((f) => ({ ...f, price: v })); validatePrice(v); }} className="w-full accent-primary" />
-                  <div className="flex justify-between text-[10px] text-muted-foreground"><span>{budgetMin.toLocaleString()}</span><span className="font-semibold text-foreground">{price.toLocaleString()} {t("currency")}</span><span>{budgetMax.toLocaleString()}</span></div>
+                  <input type="range" min={0} max={budgetMax} step={1} value={Math.min(Math.max(price || 0, 0), budgetMax)} onChange={(e) => { const v = e.target.value; setForm((f) => ({ ...f, price: v })); validatePrice(v); }} className="w-full accent-primary" />
+                  <div className="flex justify-between text-[10px] text-muted-foreground"><span>0</span><span className="font-semibold text-foreground">{price.toLocaleString()} {t("currency")}</span><span>{budgetMax.toLocaleString()}</span></div>
                 </>
               ) : (
                 <Input inputMode="decimal" value={form.price} onChange={(e) => { set("price")(e); validatePrice(e.target.value); }} placeholder="3500" />
