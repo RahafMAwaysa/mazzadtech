@@ -10,6 +10,21 @@ import { supabase } from "@/integrations/supabase/client";
 const TITLE = "Delivery company profile — MazzadTech";
 const DESC = "Manage your delivery company details, coverage city and contact number.";
 
+const CITIES = [
+  ["Nablus", "نابلس"],
+  ["Ramallah and Al-Bireh", "رام الله والبيرة"],
+  ["Hebron", "الخليل"],
+  ["Jenin", "جنين"],
+  ["Tulkarm", "طولكرم"],
+  ["Qalqilya", "قلقيلية"],
+  ["Bethlehem", "بيت لحم"],
+  ["Jericho", "أريحا والأغوار"],
+  ["Salfit", "سلفيت"],
+  ["Tubas", "طوباس"],
+  ["Gaza", "غزة"],
+  ["Jerusalem", "القدس"],
+] as const;
+
 export const Route = createFileRoute("/delivery/profile")({
   head: () => ({
     meta: [
@@ -25,7 +40,7 @@ export const Route = createFileRoute("/delivery/profile")({
 });
 
 function Body({ userId }: { userId: string }) {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [alias, setAlias] = useState("");
@@ -83,7 +98,18 @@ function Body({ userId }: { userId: string }) {
             <Input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} />
           </Field>
           <Field label={t("city")}>
-            <Input value={city} onChange={(e) => setCity(e.target.value)} />
+            <select
+              value={city}
+              onChange={(e) => setCity(e.target.value)}
+              className="h-11 w-full rounded-xl border border-input bg-card px-3 text-sm text-foreground"
+            >
+              <option value="">{t("city")}</option>
+              {CITIES.map(([en, ar]) => (
+                <option key={en} value={en}>
+                  {lang === "ar" ? ar : en}
+                </option>
+              ))}
+            </select>
           </Field>
           <p className="text-xs text-muted-foreground">
             {t("deliveryPartner")}: <span className="font-medium text-foreground">{alias}</span> —{" "}
