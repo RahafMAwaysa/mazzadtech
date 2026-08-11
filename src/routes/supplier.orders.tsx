@@ -1,25 +1,7 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { Guard } from "@/components/Guard";
-import { Page } from "@/components/AppShell";
-import { useI18n } from "@/lib/i18n";
+import { createFileRoute, Navigate } from "@tanstack/react-router";
 
+// Supplier order management now lives entirely inside My Offers.
+// Keep this route as a compatibility redirect for old bookmarks/links.
 export const Route = createFileRoute("/supplier/orders")({
-  head: () => ({
-    meta: [
-      { title: "Supplier orders — Ateeq" },
-      { name: "description", content: "Manage confirmed orders and update their delivery status." },
-      { property: "og:title", content: "Supplier orders — Ateeq" },
-      { property: "og:description", content: "Manage confirmed orders and update their delivery status." },
-    ],
-  }),
-  component: () => <Guard roles={["supplier","admin"]}>{() => <Body />}</Guard>,
+  component: () => <Navigate to="/supplier/offers" replace />,
 });
-
-function Body() {
-  const { t } = useI18n();
-  return (
-    <Page title={t("orders")}>
-      <p className="text-sm text-muted-foreground">Coming up next in this build.</p>
-    </Page>
-  );
-}
