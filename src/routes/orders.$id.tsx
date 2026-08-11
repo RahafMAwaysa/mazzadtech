@@ -35,6 +35,7 @@ function OrderDetail({ viewerRole, userId }: { viewerRole: Role; userId: string 
   const qc = useQueryClient();
   const [filing, setFiling] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [confirmBusy, setConfirmBusy] = useState(false);
   const [category, setCategory] = useState<(typeof DISPUTE_CATEGORIES)[number]>("delivery_delay");
   const [description, setDescription] = useState("");
   const [ratingStars, setRatingStars] = useState(0);
@@ -95,6 +96,19 @@ function OrderDetail({ viewerRole, userId }: { viewerRole: Role; userId: string 
     setRatingComment(data.myRating.comment ?? "");
   }, [data?.myRating]);
 
+  const confirmReceipt = async () => {
+    if (viewerRole !== "customer" || status !== "delivered") return;
+    setConfirmBusy(true);
+    const { error } = await supabase.rpc("confirm_order_receipt", { _order_id: id });
+    setConfirmBusy(false);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success("Receipt confirmed. Your order is now completed.");
+    await qc.invalidateQueries({ queryKey: ["order", id] });
+  };
+
   const fileDispute = async () => {
     if (!description.trim()) {
       toast.error(t("describeIssue"));
@@ -120,7 +134,7 @@ function OrderDetail({ viewerRole, userId }: { viewerRole: Role; userId: string 
   };
 
   const publishRating = async () => {
-    if (viewerRole !== "customer" || status !== "delivered" || !data?.order.supplier_id) return;
+    if (viewerRole !== "customer" || status !== "completed" || !data?.order.supplier_id) return;
     if (!ratingStars) {
       toast.error("Choose a star rating first.");
       return;
@@ -155,14 +169,15 @@ function OrderDetail({ viewerRole, userId }: { viewerRole: Role; userId: string 
   const currentIndex = ORDER_FLOW.indexOf(order.status as (typeof ORDER_FLOW)[number]);
   const eta = estimatedDelivery(order.created_at, order.offers?.delivery_days ?? 3, lang);
   const canFile = viewerRole === "customer" || viewerRole === "supplier";
-  const canRate = viewerRole === "customer" && order.status === "delivered";
+  const canConfirm = viewerRole === "customer" && order.status === "delivered";
+  const canRate = viewerRole === "customer" && order.status === "completed";
 
   return (
     <Page title={t("orderStatus")}>
       <Card className="space-y-2">
         <div className="flex items-start justify-between gap-3">
           <p className="text-sm font-semibold">{order.offers?.product_name}</p>
-          <Badge tone={order.status === "delivered" ? "success" : "primary"}>{t(statusKey(order.status))}</Badge>
+          <Badge tone={order.status === "delivered" || order.status === "completed" ? "success" : "primary"}>{t(statusKey(order.status))}</Badge>
         </div>
         <p className="text-xs text-muted-foreground">
           {t("orderNumber")}: {order.order_number}
@@ -207,6 +222,20 @@ function OrderDetail({ viewerRole, userId }: { viewerRole: Role; userId: string 
         </ol>
         <p className="text-[11px] text-muted-foreground">{t("trackingSim")}</p>
       </Card>
+
+      {canConfirm && (
+        <Card className="space-y-3 border-success/30 bg-success/5">
+          <div>
+            <p className="font-display font-semibold">Your order was delivered</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Confirm that you received the order to complete the purchase and unlock your review.
+            </p>
+          </div>
+          <Button className="w-full" onClick={() => void confirmReceipt()} disabled={confirmBusy}>
+            {confirmBusy ? <Spinner /> : "Confirm receipt"}
+          </Button>
+        </Card>
+      )}
 
       {canRate && (
         <Card className="space-y-4">
