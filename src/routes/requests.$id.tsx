@@ -23,14 +23,6 @@ export const Route = createFileRoute("/requests/$id")({
 
 type Sort = "match" | "price" | "warranty" | "delivery" | "rating";
 
-type SupplierReview = {
-  id: string;
-  stars: number;
-  comment: string | null;
-  created_at: string;
-  reviewer_name: string | null;
-};
-
 function RequestOffers() {
   const { id } = Route.useParams();
   const { t, lang } = useI18n();
@@ -40,35 +32,57 @@ function RequestOffers() {
   const { data, isLoading } = useQuery({
     queryKey: ["request", id],
     queryFn: async () => {
+      // Fetch only fields this page actually renders. This keeps the initial
+      // payload small, especially when offers contain larger optional fields.
       const [{ data: request, error: e1 }, { data: offers, error: e2 }] = await Promise.all([
-        supabase.from("purchase_requests").select("*").eq("id", id).single(),
-        supabase.from("offers").select("*").eq("request_id", id),
+        supabase
+          .from("purchase_requests")
+          .select("id,title,category,budget_min,budget_max,specs,warranty_preference,delivery_preference,brands,status")
+          .eq("id", id)
+          .single(),
+        supabase
+          .from("offers")
+          .select("id,supplier_id,price,specs,warranty_months,delivery_days,product_name,model,image_url,benefits")
+          .eq("request_id", id),
       ]);
       if (e1) throw e1;
       if (e2) throw e2;
-      const supplierIds = [...new Set((offers ?? []).map((o) => o.supplier_id))];
-      const { data: suppliers } = supplierIds.length
-        ? await supabase
-            .from("supplier_profiles")
-            .select("user_id, alias, rating, verified, completed_orders")
-            .in("user_id", supplierIds)
-        : { data: [] };
 
-      const reviewEntries = await Promise.all(
-        supplierIds.map(async (supplierId) => {
-          const { data: reviews, error } = await (supabase as any).rpc("get_supplier_reviews", {
-            _supplier_id: supplierId,
-          });
-          if (error) throw error;
-          return [supplierId, (reviews ?? []) as SupplierReview[]] as const;
+      const supplierIds = [...new Set((offers ?? []).map((o) => o.supplier_id))];
+
+      if (supplierIds.length === 0) {
+        return {
+          request,
+          offers: [],
+          suppliers: [],
+          reviewCountsBySupplier: new Map<string, number>(),
+        };
+      }
+
+      // Supplier profiles and review counts are fetched in two batched queries.
+      // Avoid one get_supplier_reviews() RPC per offer/supplier (N+1 requests).
+      const [{ data: suppliers }, { data: reviewCounts, error: reviewError }] = await Promise.all([
+        supabase
+          .from("supplier_profiles")
+          .select("user_id, alias, rating, verified, completed_orders")
+          .in("user_id", supplierIds),
+        (supabase as any).rpc("get_supplier_review_counts", {
+          _supplier_ids: supplierIds,
         }),
-      );
+      ]);
+
+      if (reviewError) throw reviewError;
 
       return {
         request,
         offers: offers ?? [],
         suppliers: suppliers ?? [],
-        reviewsBySupplier: new Map(reviewEntries),
+        reviewCountsBySupplier: new Map(
+          ((reviewCounts ?? []) as { supplier_id: string; review_count: number }[]).map((row) => [
+            row.supplier_id,
+            Number(row.review_count),
+          ]),
+        ),
       };
     },
   });
@@ -78,7 +92,7 @@ function RequestOffers() {
     const req = data.request;
     const list = data.offers.map((offer) => {
       const supplier = data.suppliers.find((s) => s.user_id === offer.supplier_id);
-      const reviews = data.reviewsBySupplier.get(offer.supplier_id) ?? [];
+      const reviewCount = data.reviewCountsBySupplier.get(offer.supplier_id) ?? 0;
       const match = computeMatch({
         request: {
           budget_min: req.budget_min ? Number(req.budget_min) : null,
@@ -97,7 +111,7 @@ function RequestOffers() {
         },
         supplier: { rating: Number(supplier?.rating ?? 0), verified: supplier?.verified ?? false },
       });
-      return { offer, supplier, match, reviewCount: reviews.length };
+      return { offer, supplier, match, reviewCount };
     });
 
     return list.sort((a, b) => {
