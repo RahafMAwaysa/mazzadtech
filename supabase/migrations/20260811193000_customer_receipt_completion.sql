@@ -2,6 +2,8 @@
 -- Delivery partners can mark an order as delivered, but only the customer
 -- can move it to completed and release the supplier payout.
 
+ALTER TYPE public.order_status ADD VALUE IF NOT EXISTS 'completed';
+
 CREATE OR REPLACE FUNCTION public.credit_supplier_wallet(
   _supplier_id uuid,
   _amount numeric,
@@ -14,7 +16,7 @@ SET search_path = public
 AS $$
 DECLARE
   wallet_id uuid;
-  order_status text;
+  order_status public.order_status;
 BEGIN
   SELECT status INTO order_status
   FROM public.orders
@@ -22,7 +24,7 @@ BEGIN
 
   -- Checkout currently calls this function when the order is created.
   -- Do not release supplier funds until the customer confirms receipt.
-  IF order_status IS DISTINCT FROM 'completed' THEN
+  IF order_status IS DISTINCT FROM 'completed'::public.order_status THEN
     RETURN;
   END IF;
 
@@ -77,20 +79,20 @@ BEGIN
     RAISE EXCEPTION 'Order not found';
   END IF;
 
-  IF o.status = 'completed' THEN
+  IF o.status = 'completed'::public.order_status THEN
     RETURN;
   END IF;
 
-  IF o.status <> 'delivered' THEN
+  IF o.status <> 'delivered'::public.order_status THEN
     RAISE EXCEPTION 'Order must be marked delivered before receipt can be confirmed';
   END IF;
 
   UPDATE public.orders
-  SET status = 'completed'
+  SET status = 'completed'::public.order_status
   WHERE id = _order_id;
 
   INSERT INTO public.order_events (order_id, status)
-  VALUES (_order_id, 'completed');
+  VALUES (_order_id, 'completed'::public.order_status);
 
   PERFORM public.credit_supplier_wallet(
     o.supplier_id,
@@ -101,24 +103,3 @@ END;
 $$;
 
 GRANT EXECUTE ON FUNCTION public.confirm_order_receipt(uuid) TO authenticated;
-
--- Keep existing frontend/backend status constraints compatible while allowing
--- the customer-confirmed terminal state.
-ALTER TABLE public.orders
-  DROP CONSTRAINT IF EXISTS orders_status_check;
-
-ALTER TABLE public.orders
-  ADD CONSTRAINT orders_status_check
-  CHECK (
-    status IN (
-      'confirmed',
-      'preparing',
-      'verified',
-      'received_from_supplier',
-      'in_transit',
-      'shipping',
-      'delivered',
-      'completed',
-      'cancelled'
-    )
-  );
