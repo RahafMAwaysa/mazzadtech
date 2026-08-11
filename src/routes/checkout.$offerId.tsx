@@ -43,6 +43,8 @@ function Checkout({ userId }: { userId: string }) {
   const [addingCard, setAddingCard] = useState(false);
   const [newLast4, setNewLast4] = useState("");
   const [newBrand, setNewBrand] = useState("Visa");
+  const [newExpiryMonth, setNewExpiryMonth] = useState("");
+  const [newExpiryYear, setNewExpiryYear] = useState("");
 
   const [selectedLocationId, setSelectedLocationId] = useState<string | null>(null);
   const [addingLocation, setAddingLocation] = useState(false);
@@ -142,12 +144,14 @@ function Checkout({ userId }: { userId: string }) {
         customer_id: userId,
         brand: newBrand,
         last4: newLast4.trim(),
+        expiry_month: newExpiryMonth ? Number(newExpiryMonth) : null,
+        expiry_year: newExpiryYear ? Number(newExpiryYear) : null,
         is_default: !cards || cards.length === 0,
       })
       .select()
       .single();
     if (error) {
-      toast.error(error.message);
+      toast.error(errorMessage(error));
       return;
     }
     await qc.invalidateQueries({ queryKey: ["payment_cards", userId] });
@@ -431,6 +435,22 @@ function Checkout({ userId }: { userId: string }) {
                 maxLength={4}
                 value={newLast4}
                 onChange={(e) => setNewLast4(e.target.value.replace(/\D/g, ""))}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <input
+                className="rounded-xl border border-border bg-background p-2 text-sm"
+                placeholder={t("expiryMonth")}
+                maxLength={2}
+                value={newExpiryMonth}
+                onChange={(e) => setNewExpiryMonth(e.target.value.replace(/\D/g, ""))}
+              />
+              <input
+                className="rounded-xl border border-border bg-background p-2 text-sm"
+                placeholder={t("expiryYear")}
+                maxLength={4}
+                value={newExpiryYear}
+                onChange={(e) => setNewExpiryYear(e.target.value.replace(/\D/g, ""))}
               />
             </div>
             <div className="flex gap-2">

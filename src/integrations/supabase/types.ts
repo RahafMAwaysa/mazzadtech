@@ -533,6 +533,9 @@ export type Database = {
           customer_id: string
           brand: string
           last4: string
+          expiry_month: number | null
+          expiry_year: number | null
+          provider_ref: string | null
           is_default: boolean
           created_at: string
         }
@@ -541,6 +544,9 @@ export type Database = {
           customer_id: string
           brand?: string
           last4: string
+          expiry_month?: number | null
+          expiry_year?: number | null
+          provider_ref?: string | null
           is_default?: boolean
           created_at?: string
         }
@@ -549,6 +555,9 @@ export type Database = {
           customer_id?: string
           brand?: string
           last4?: string
+          expiry_month?: number | null
+          expiry_year?: number | null
+          provider_ref?: string | null
           is_default?: boolean
           created_at?: string
         }
