@@ -14,6 +14,7 @@ import {
   AlertTriangle,
   UserRound,
   FileText,
+  Archive,
 } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { signOut, type Role } from "@/lib/session";
@@ -48,21 +49,22 @@ export function AppShell({
             { to: "/delivery", label: t("deliveries"), icon: <Truck className="size-5" /> },
             { to: "/delivery/profile", label: t("profile"), icon: <ShieldCheck className="size-5" /> },
           ]
-        : role === "admin"
-          ? [
-              { to: "/admin", label: t("dashboard"), icon: <LayoutDashboard className="size-5" /> },
-              { to: "/admin/suppliers", label: t("suppliers"), icon: <ShieldCheck className="size-5" /> },
-              { to: "/admin/disputes", label: t("disputes"), icon: <AlertTriangle className="size-5" /> },
-              { to: "/admin/orders", label: t("orders"), icon: <Package className="size-5" /> },
-              { to: "/admin/reports", label: "Reports", icon: <FileText className="size-5" /> },
-            ]
-          : [
-              { to: "/", label: t("home"), icon: <Home className="size-5" /> },
-              { to: "/assistant", label: t("assistant"), icon: <MessagesSquare className="size-5" /> },
-              { to: "/requests", label: t("requests"), icon: <ClipboardList className="size-5" /> },
-              { to: "/orders", label: t("orders"), icon: <Package className="size-5" /> },
-              { to: "/profile", label: t("profile"), icon: <UserRound className="size-5" /> },
-            ];
+      : role === "admin"
+        ? [
+            { to: "/admin", label: t("dashboard"), icon: <LayoutDashboard className="size-5" /> },
+            { to: "/admin/suppliers", label: t("suppliers"), icon: <ShieldCheck className="size-5" /> },
+            { to: "/admin/disputes", label: t("disputes"), icon: <AlertTriangle className="size-5" /> },
+            { to: "/admin/orders", label: t("orders"), icon: <Package className="size-5" /> },
+            { to: "/admin/reports", label: "Reports", icon: <FileText className="size-5" /> },
+            { to: "/admin/saved-reports", label: "Saved", icon: <Archive className="size-5" /> },
+          ]
+        : [
+            { to: "/", label: t("home"), icon: <Home className="size-5" /> },
+            { to: "/assistant", label: t("assistant"), icon: <MessagesSquare className="size-5" /> },
+            { to: "/requests", label: t("requests"), icon: <ClipboardList className="size-5" /> },
+            { to: "/orders", label: t("orders"), icon: <Package className="size-5" /> },
+            { to: "/profile", label: t("profile"), icon: <UserRound className="size-5" /> },
+          ];
 
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-lg flex-col bg-background">
