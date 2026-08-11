@@ -37,7 +37,7 @@ function Body() {
   const [category, setCategory] = useState("");
   const [supplier, setSupplier] = useState("");
   const [orderStatus, setOrderStatus] = useState("");
-  const [selectedFields, setSelectedFields] = useState<string[]>(FIELDS.Financial);
+  const [selectedFields, setSelectedFields] = useState<string[]>([]);
   const [generated, setGenerated] = useState(false);
 
   const { data: categories, isLoading: categoriesLoading } = useQuery({
@@ -58,6 +58,9 @@ function Body() {
     },
   });
 
+  const availableFields = Array.from(new Set(reportTypes.flatMap((type) => FIELDS[type])));
+  const allFieldsSelected = availableFields.length > 0 && availableFields.every((field) => selectedFields.includes(field));
+
   const toggleReportType = (type: (typeof REPORT_TYPES)[number]) => {
     setReportTypes((current) => {
       if (current.includes(type)) {
@@ -66,17 +69,19 @@ function Body() {
         setSelectedFields((fields) => fields.filter((field) => next.some((selectedType) => FIELDS[selectedType].includes(field))));
         return next;
       }
-      const next = [...current, type];
-      setSelectedFields((fields) => Array.from(new Set([...fields, ...FIELDS[type]])));
-      return next;
+      return [...current, type];
     });
+    setSelectedFields([]);
     setGenerated(false);
   };
 
-  const availableFields = Array.from(new Set(reportTypes.flatMap((type) => FIELDS[type])));
-
   const toggleField = (field: string) => {
     setSelectedFields((current) => current.includes(field) ? current.filter((item) => item !== field) : [...current, field]);
+    setGenerated(false);
+  };
+
+  const selectAllFields = () => {
+    setSelectedFields(allFieldsSelected ? [] : availableFields);
     setGenerated(false);
   };
 
@@ -102,9 +107,9 @@ function Body() {
       <Card className="space-y-4">
         <div className="flex items-center gap-2 font-display font-semibold"><CalendarDays className="size-4 text-primary" />Date range</div>
         <div className="flex flex-wrap gap-2">
-          {DATE_PRESETS.map((preset) => <button key={preset} type="button" onClick={() => setDatePreset(preset)} className={`rounded-full border px-3 py-1.5 text-xs font-medium ${datePreset === preset ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground"}`}>{preset}</button>)}
+          {DATE_PRESETS.map((preset) => <button key={preset} type="button" onClick={() => { setDatePreset(preset); setGenerated(false); }} className={`rounded-full border px-3 py-1.5 text-xs font-medium ${datePreset === preset ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground"}`}>{preset}</button>)}
         </div>
-        {datePreset === "Custom" && <div className="grid grid-cols-2 gap-3"><Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} /><Input type="date" value={to} onChange={(e) => setTo(e.target.value)} /></div>}
+        {datePreset === "Custom" && <div className="grid grid-cols-2 gap-3"><Input type="date" value={from} onChange={(e) => { setFrom(e.target.value); setGenerated(false); }} /><Input type="date" value={to} onChange={(e) => { setTo(e.target.value); setGenerated(false); }} /></div>}
       </Card>
 
       <Card className="space-y-4">
@@ -117,7 +122,10 @@ function Body() {
       </Card>
 
       <Card className="space-y-4">
-        <div><h2 className="font-display font-semibold">Information to include</h2><p className="text-xs text-muted-foreground">Select the sections you want in the generated report.</p></div>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div><h2 className="font-display font-semibold">Information to include</h2><p className="text-xs text-muted-foreground">Choose exactly what you want in the generated report. Nothing is selected by default.</p></div>
+          <Button type="button" variant="outline" size="sm" onClick={selectAllFields} disabled={!availableFields.length}>{allFieldsSelected ? "Clear all" : "Select all"}</Button>
+        </div>
         <div className="grid gap-2 sm:grid-cols-2">
           {availableFields.map((field) => (
             <label key={field} className="flex cursor-pointer items-center gap-3 rounded-xl border border-border p-3 text-sm hover:bg-muted/40">
