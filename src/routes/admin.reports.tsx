@@ -127,12 +127,29 @@ function Body() {
     } finally { setLoading(false); }
   };
 
-  const saveReport = () => {
+  const saveReport = async () => {
     if (!preview) return;
-    const existing = JSON.parse(localStorage.getItem("mazzadtech_saved_reports") || "[]");
-    existing.unshift({ id: crypto.randomUUID(), createdAt: new Date().toISOString(), reportTypes, datePreset, from, to, category, supplier, orderStatus, selectedFields, preview });
-    localStorage.setItem("mazzadtech_saved_reports", JSON.stringify(existing.slice(0, 20)));
-    setSaved(true);
+    setSaved(false);
+    setError("");
+    try {
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+      if (userError) throw userError;
+      const userId = userData.user?.id;
+      if (!userId) throw new Error("You must be signed in to save a report.");
+
+      const db = supabase as any;
+      const { error: saveError } = await db.from("reports").insert({
+        admin_id: userId,
+        supplier_id: null,
+        title: `${reportTypes.join(" + ")} Report — ${datePreset}`,
+        params: { reportTypes, datePreset, from, to, category, supplier, orderStatus, selectedFields },
+        content: preview,
+      });
+      if (saveError) throw saveError;
+      setSaved(true);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not save the report.");
+    }
   };
 
   return (
