@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { ChevronDown, Building2, MapPin, Phone } from "lucide-react";
 import { Guard } from "@/components/Guard";
 import { Page } from "@/components/AppShell";
 import { Button, Card, Field, Input, Spinner } from "@/components/ui-kit";
@@ -89,37 +90,74 @@ function Body({ userId }: { userId: string }) {
 
   return (
     <Page title={t("profile")}>
-      <Card>
-        <form onSubmit={save} className="space-y-3">
-          <Field label={t("deliveryCompanyName")}>
-            <Input value={companyName} onChange={(e) => setCompanyName(e.target.value)} required />
-          </Field>
-          <Field label={t("phone")}>
-            <Input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} />
-          </Field>
-          <Field label={t("city")}>
-            <select
-              value={city}
-              onChange={(e) => setCity(e.target.value)}
-              className="h-11 w-full rounded-xl border border-input bg-card px-3 text-sm text-foreground"
-            >
-              <option value="">{t("city")}</option>
-              {CITIES.map(([en, ar]) => (
-                <option key={en} value={en}>
-                  {lang === "ar" ? ar : en}
-                </option>
-              ))}
-            </select>
-          </Field>
-          <p className="text-xs text-muted-foreground">
-            {t("deliveryPartner")}: <span className="font-medium text-foreground">{alias}</span> —{" "}
-            {t("identityProtected")}
-          </p>
-          <Button type="submit" className="w-full" disabled={busy}>
-            {busy ? <Spinner /> : t("save")}
-          </Button>
-        </form>
-      </Card>
+      <div className="mx-auto w-full max-w-2xl">
+        <Card className="overflow-hidden p-0 shadow-sm">
+          <div className="border-b border-border bg-muted/20 px-5 py-4 sm:px-6">
+            <div className="flex items-center gap-3">
+              <div className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
+                <Building2 className="size-5" />
+              </div>
+              <div>
+                <h2 className="font-display text-base font-semibold">{t("deliveryCompanyName")}</h2>
+                <p className="mt-0.5 text-xs text-muted-foreground">{t("identityProtected")}</p>
+              </div>
+            </div>
+          </div>
+
+          <form onSubmit={save} className="space-y-5 p-5 sm:p-6">
+            <Field label={t("deliveryCompanyName")}>
+              <div className="relative">
+                <Building2 className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  value={companyName}
+                  onChange={(e) => setCompanyName(e.target.value)}
+                  required
+                  className="pl-10"
+                />
+              </div>
+            </Field>
+
+            <Field label={t("phone")}>
+              <div className="relative">
+                <Phone className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  type="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+            </Field>
+
+            <Field label={t("city")}>
+              <div className="relative">
+                <MapPin className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                <select
+                  value={city}
+                  onChange={(e) => setCity(e.target.value)}
+                  className="h-11 w-full appearance-none rounded-xl border border-input bg-card pl-10 pr-10 text-sm text-foreground outline-none transition-shadow focus-visible:ring-2 focus-visible:ring-primary/30"
+                >
+                  <option value="">{t("city")}</option>
+                  {CITIES.map(([en, ar]) => (
+                    <option key={en} value={en}>
+                      {lang === "ar" ? ar : en}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+              </div>
+            </Field>
+
+            <div className="rounded-xl border border-border bg-muted/20 px-3.5 py-3 text-xs text-muted-foreground">
+              {t("deliveryPartner")}: <span className="font-medium text-foreground">{alias}</span>
+            </div>
+
+            <Button type="submit" className="h-11 w-full" disabled={busy}>
+              {busy ? <Spinner /> : t("save")}
+            </Button>
+          </form>
+        </Card>
+      </div>
     </Page>
   );
 }
