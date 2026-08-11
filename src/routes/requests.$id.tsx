@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Check, PackageSearch, ShieldCheck, Star, Truck, X } from "lucide-react";
 import { Guard } from "@/components/Guard";
 import { Page } from "@/components/AppShell";
@@ -22,6 +22,14 @@ export const Route = createFileRoute("/requests/$id")({
 });
 
 type Sort = "match" | "price" | "warranty" | "delivery" | "rating";
+
+type SupplierReview = {
+  id: string;
+  stars: number;
+  comment: string | null;
+  created_at: string;
+  reviewer_name: string | null;
+};
 
 function RequestOffers() {
   const { id } = Route.useParams();
@@ -45,7 +53,23 @@ function RequestOffers() {
             .select("user_id, alias, rating, verified, completed_orders")
             .in("user_id", supplierIds)
         : { data: [] };
-      return { request, offers: offers ?? [], suppliers: suppliers ?? [] };
+
+      const reviewEntries = await Promise.all(
+        supplierIds.map(async (supplierId) => {
+          const { data: reviews, error } = await (supabase as any).rpc("get_supplier_reviews", {
+            _supplier_id: supplierId,
+          });
+          if (error) throw error;
+          return [supplierId, (reviews ?? []) as SupplierReview[]] as const;
+        }),
+      );
+
+      return {
+        request,
+        offers: offers ?? [],
+        suppliers: suppliers ?? [],
+        reviewsBySupplier: new Map(reviewEntries),
+      };
     },
   });
 
@@ -54,6 +78,7 @@ function RequestOffers() {
     const req = data.request;
     const list = data.offers.map((offer) => {
       const supplier = data.suppliers.find((s) => s.user_id === offer.supplier_id);
+      const reviews = data.reviewsBySupplier.get(offer.supplier_id) ?? [];
       const match = computeMatch({
         request: {
           budget_min: req.budget_min ? Number(req.budget_min) : null,
@@ -70,9 +95,9 @@ function RequestOffers() {
           delivery_days: offer.delivery_days,
           product_name: offer.product_name,
         },
-        supplier: { rating: Number(supplier?.rating ?? 4.3), verified: supplier?.verified ?? false },
+        supplier: { rating: Number(supplier?.rating ?? 0), verified: supplier?.verified ?? false },
       });
-      return { offer, supplier, match };
+      return { offer, supplier, match, reviewCount: reviews.length };
     });
 
     return list.sort((a, b) => {
@@ -152,7 +177,7 @@ function RequestOffers() {
           </div>
 
           <div className="space-y-3">
-            {ranked.map(({ offer, supplier, match }, index) => (
+            {ranked.map(({ offer, supplier, match, reviewCount }, index) => (
               <Card key={offer.id} className="space-y-3">
                 {index === 0 && sort === "match" && <Badge tone="success">{t("recommended")}</Badge>}
                 <div className="flex items-start gap-3">
@@ -185,8 +210,17 @@ function RequestOffers() {
                     <Truck className="size-3.5" /> {offer.delivery_days} {t("daysDelivery")}
                   </span>
                   <span className="inline-flex items-center gap-1">
-                    <Star className="size-3.5" /> {Number(supplier?.rating ?? 4.5).toFixed(1)}
+                    <Star className="size-3.5" /> {Number(supplier?.rating ?? 0) > 0 ? Number(supplier?.rating).toFixed(1) : "No ratings yet"}
                   </span>
+                  {supplier && (
+                    <button
+                      type="button"
+                      onClick={() => navigate({ to: "/suppliers/$supplierId/reviews", params: { supplierId: supplier.user_id } })}
+                      className="font-medium text-primary underline-offset-2 hover:underline"
+                    >
+                      {reviewCount} {reviewCount === 1 ? "review" : "reviews"}
+                    </button>
+                  )}
                   <span>{supplier?.alias ?? "SUP"}</span>
                   {supplier?.verified && <Badge tone="success">{t("verified")}</Badge>}
                 </div>
