@@ -17,7 +17,6 @@ import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as AdminDisputesRouteImport } from './routes/admin.disputes'
 import { Route as AdminOrdersRouteImport } from './routes/admin.orders'
 import { Route as AdminSuppliersRouteImport } from './routes/admin.suppliers'
-import { Route as AdminUsersRouteImport } from './routes/admin.users'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
 import { Route as CheckoutOfferIdRouteImport } from './routes/checkout.$offerId'
 import { Route as DeliveryIndexRouteImport } from './routes/delivery.index'
@@ -71,11 +70,6 @@ const AdminOrdersRoute = AdminOrdersRouteImport.update({
 const AdminSuppliersRoute = AdminSuppliersRouteImport.update({
   id: '/admin/suppliers',
   path: '/admin/suppliers',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AdminUsersRoute = AdminUsersRouteImport.update({
-  id: '/admin/users',
-  path: '/admin/users',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiChatRoute = ApiChatRouteImport.update({
@@ -157,7 +151,6 @@ export interface FileRoutesByFullPath {
   '/admin/disputes': typeof AdminDisputesRoute
   '/admin/orders': typeof AdminOrdersRoute
   '/admin/suppliers': typeof AdminSuppliersRoute
-  '/admin/users': typeof AdminUsersRoute
   '/api/chat': typeof ApiChatRoute
   '/checkout/$offerId': typeof CheckoutOfferIdRoute
   '/delivery/profile': typeof DeliveryProfileRoute
@@ -182,7 +175,6 @@ export interface FileRoutesByTo {
   '/admin/disputes': typeof AdminDisputesRoute
   '/admin/orders': typeof AdminOrdersRoute
   '/admin/suppliers': typeof AdminSuppliersRoute
-  '/admin/users': typeof AdminUsersRoute
   '/api/chat': typeof ApiChatRoute
   '/checkout/$offerId': typeof CheckoutOfferIdRoute
   '/delivery/profile': typeof DeliveryProfileRoute
@@ -208,7 +200,6 @@ export interface FileRoutesById {
   '/admin/disputes': typeof AdminDisputesRoute
   '/admin/orders': typeof AdminOrdersRoute
   '/admin/suppliers': typeof AdminSuppliersRoute
-  '/admin/users': typeof AdminUsersRoute
   '/api/chat': typeof ApiChatRoute
   '/checkout/$offerId': typeof CheckoutOfferIdRoute
   '/delivery/profile': typeof DeliveryProfileRoute
@@ -235,7 +226,6 @@ export interface FileRouteTypes {
     | '/admin/disputes'
     | '/admin/orders'
     | '/admin/suppliers'
-    | '/admin/users'
     | '/api/chat'
     | '/checkout/$offerId'
     | '/delivery/profile'
@@ -260,7 +250,6 @@ export interface FileRouteTypes {
     | '/admin/disputes'
     | '/admin/orders'
     | '/admin/suppliers'
-    | '/admin/users'
     | '/api/chat'
     | '/checkout/$offerId'
     | '/delivery/profile'
@@ -285,7 +274,6 @@ export interface FileRouteTypes {
     | '/admin/disputes'
     | '/admin/orders'
     | '/admin/suppliers'
-    | '/admin/users'
     | '/api/chat'
     | '/checkout/$offerId'
     | '/delivery/profile'
@@ -311,7 +299,6 @@ export interface RootRouteChildren {
   AdminDisputesRoute: typeof AdminDisputesRoute
   AdminOrdersRoute: typeof AdminOrdersRoute
   AdminSuppliersRoute: typeof AdminSuppliersRoute
-  AdminUsersRoute: typeof AdminUsersRoute
   ApiChatRoute: typeof ApiChatRoute
   CheckoutOfferIdRoute: typeof CheckoutOfferIdRoute
   DeliveryProfileRoute: typeof DeliveryProfileRoute
@@ -385,13 +372,6 @@ declare module '@tanstack/react-router' {
       path: '/admin/suppliers'
       fullPath: '/admin/suppliers'
       preLoaderRoute: typeof AdminSuppliersRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin/users': {
-      id: '/admin/users'
-      path: '/admin/users'
-      fullPath: '/admin/users'
-      preLoaderRoute: typeof AdminUsersRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/chat': {
@@ -503,7 +483,6 @@ const rootRouteChildren: RootRouteChildren = {
   AdminDisputesRoute: AdminDisputesRoute,
   AdminOrdersRoute: AdminOrdersRoute,
   AdminSuppliersRoute: AdminSuppliersRoute,
-  AdminUsersRoute: AdminUsersRoute,
   ApiChatRoute: ApiChatRoute,
   CheckoutOfferIdRoute: CheckoutOfferIdRoute,
   DeliveryProfileRoute: DeliveryProfileRoute,
