@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { CalendarDays, Eye, FileText, Filter, Printer, Save, SlidersHorizontal, Trash2 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { CalendarDays, Eye, FileText, Filter, Printer, Save, SlidersHorizontal } from "lucide-react";
 import { Guard } from "@/components/Guard";
 import { Page } from "@/components/AppShell";
 import { Button, Card, Input } from "@/components/ui-kit";
@@ -27,10 +27,9 @@ const money = (value: number) => value.toLocaleString(undefined, { minimumFracti
 const titleCase = (value: string) => value.replaceAll("_", " ").replace(/\b\w/g, (c) => c.toUpperCase());
 
 type ReportData = { rows: any[]; gross: number; supplierCommission: number; customerCommission: number; delivery: number; supplierPayouts: number; walletBalance: number; platformRevenue: number; disputeRows: any[]; supplierRows: any[]; customerCount: number };
-type SavedReport = { id: string; title: string; params: any; content: ReportData; created_at: string };
+type SavedAdminReport = { id: string; title: string; report_types: string[]; filters: any; selected_fields: string[]; report_data: ReportData; created_at: string };
 
 function Body() {
-  const queryClient = useQueryClient();
   const [reportTypes, setReportTypes] = useState<(typeof REPORT_TYPES)[number][]>(["Financial"]);
   const [datePreset, setDatePreset] = useState<(typeof DATE_PRESETS)[number]>("This Month");
   const [from, setFrom] = useState("");
@@ -43,6 +42,8 @@ function Body() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [saved, setSaved] = useState(false);
+  const [savedReports, setSavedReports] = useState<SavedAdminReport[]>([]);
+  const [savedReportsLoading, setSavedReportsLoading] = useState(false);
 
   const { data: categories } = useQuery({
     queryKey: ["admin-report-categories"],
@@ -60,18 +61,22 @@ function Body() {
       return data ?? [];
     },
   });
-  const { data: savedReports = [], isLoading: savedReportsLoading } = useQuery({
-    queryKey: ["admin-saved-reports"],
-    queryFn: async () => {
-      const db = supabase as any;
-      const { data, error } = await db.from("admin_saved_reports").select("id, title, params, content, created_at").order("created_at", { ascending: false });
-      if (error) throw error;
-      return (data ?? []) as SavedReport[];
-    },
-  });
 
   const availableFields = useMemo(() => Array.from(new Set(reportTypes.flatMap((type) => FIELDS[type]))), [reportTypes]);
   const allFieldsSelected = availableFields.length > 0 && availableFields.every((field) => selectedFields.includes(field));
+
+  const loadSavedReports = async () => {
+    setSavedReportsLoading(true);
+    try {
+      const { data, error } = await (supabase as any).from("admin_reports").select("id, title, report_types, filters, selected_fields, report_data, created_at").order("created_at", { ascending: false });
+      if (error) throw error;
+      setSavedReports((data ?? []) as SavedAdminReport[]);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not load saved reports.");
+    } finally {
+      setSavedReportsLoading(false);
+    }
+  };
 
   const toggleReportType = (type: (typeof REPORT_TYPES)[number]) => {
     setReportTypes((current) => current.includes(type) ? (current.length === 1 ? current : current.filter((item) => item !== type)) : [...current, type]);
@@ -148,39 +153,27 @@ function Body() {
       if (userError) throw userError;
       const userId = userData.user?.id;
       if (!userId) throw new Error("You must be signed in to save a report.");
-      const db = supabase as any;
-      const { error: saveError } = await db.from("admin_saved_reports").insert({
+      const { error: saveError } = await (supabase as any).from("admin_reports").insert({
         admin_id: userId,
         title: `${reportTypes.join(" + ")} Report — ${datePreset}`,
-        params: { reportTypes, datePreset, from, to, category, supplier, orderStatus, selectedFields },
-        content: preview,
+        report_types: reportTypes,
+        filters: { datePreset, from, to, category, supplier, orderStatus },
+        selected_fields: selectedFields,
+        report_data: preview,
       });
       if (saveError) throw saveError;
       setSaved(true);
-      await queryClient.invalidateQueries({ queryKey: ["admin-saved-reports"] });
+      await loadSavedReports();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not save the report.");
     }
   };
 
-  const openSavedReport = (report: SavedReport) => {
-    const p = report.params ?? {};
-    setReportTypes(p.reportTypes?.length ? p.reportTypes : ["Financial"]);
-    setDatePreset(p.datePreset ?? "This Month"); setFrom(p.from ?? ""); setTo(p.to ?? ""); setCategory(p.category ?? ""); setSupplier(p.supplier ?? ""); setOrderStatus(p.orderStatus ?? ""); setSelectedFields(p.selectedFields ?? []); setPreview(report.content ?? null); setSaved(true); setError("");
+  const openSavedReport = (report: SavedAdminReport) => {
+    const filters = report.filters ?? {};
+    setReportTypes((report.report_types?.length ? report.report_types : ["Financial"]) as (typeof REPORT_TYPES)[number][]);
+    setDatePreset(filters.datePreset ?? "This Month"); setFrom(filters.from ?? ""); setTo(filters.to ?? ""); setCategory(filters.category ?? ""); setSupplier(filters.supplier ?? ""); setOrderStatus(filters.orderStatus ?? ""); setSelectedFields(report.selected_fields ?? []); setPreview(report.report_data ?? null); setSaved(true); setError("");
     window.scrollTo({ top: 0, behavior: "smooth" });
-  };
-
-  const deleteSavedReport = async (id: string) => {
-    if (!window.confirm("Delete this saved report?")) return;
-    setError("");
-    try {
-      const db = supabase as any;
-      const { error: deleteError } = await db.from("admin_saved_reports").delete().eq("id", id);
-      if (deleteError) throw deleteError;
-      await queryClient.invalidateQueries({ queryKey: ["admin-saved-reports"] });
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not delete the report.");
-    }
   };
 
   return (
@@ -205,8 +198,8 @@ function Body() {
       </Card>}
 
       <Card className="mt-5 print:hidden">
-        <div className="flex items-start justify-between gap-3 border-b pb-3"><div><h2 className="font-display font-semibold">Saved Reports</h2><p className="text-xs text-muted-foreground">Reports saved to your admin account. They remain available after logout and on other devices.</p></div><span className="rounded-full bg-muted px-2.5 py-1 text-xs">{savedReports.length}</span></div>
-        <div className="divide-y">{savedReportsLoading ? <p className="py-5 text-sm text-muted-foreground">Loading saved reports…</p> : savedReports.length === 0 ? <p className="py-5 text-sm text-muted-foreground">No saved reports yet.</p> : savedReports.map((report) => <div key={report.id} className="flex items-center justify-between gap-3 py-3"><div className="min-w-0"><p className="truncate text-sm font-medium">{report.title}</p><p className="text-xs text-muted-foreground">{new Date(report.created_at).toLocaleString()}</p></div><div className="flex shrink-0 gap-2"><Button variant="outline" size="sm" onClick={() => openSavedReport(report)}>Open</Button><Button variant="ghost" size="icon" aria-label="Delete report" onClick={() => deleteSavedReport(report.id)}><Trash2 className="size-4 text-destructive" /></Button></div></div>)}</div>
+        <div className="flex items-start justify-between gap-3 border-b pb-3"><div><h2 className="font-display font-semibold">Saved Reports</h2><p className="text-xs text-muted-foreground">Saved reports stay on this page and are linked to your admin account.</p></div><Button variant="outline" size="sm" onClick={loadSavedReports}>{savedReportsLoading ? "Loading…" : "Refresh"}</Button></div>
+        <div className="divide-y">{savedReports.length === 0 ? <p className="py-5 text-sm text-muted-foreground">Click Refresh to load saved reports.</p> : savedReports.map((report) => <div key={report.id} className="flex items-center justify-between gap-3 py-3"><div className="min-w-0"><p className="truncate text-sm font-medium">{report.title}</p><p className="text-xs text-muted-foreground">{new Date(report.created_at).toLocaleString()}</p></div><Button variant="outline" size="sm" onClick={() => openSavedReport(report)}>Open</Button></div>)}</div>
       </Card>
     </Page>
   );
