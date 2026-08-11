@@ -1,11 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { Check, MessageSquareWarning } from "lucide-react";
+import { Check, MessageSquareWarning, Star } from "lucide-react";
 import { toast } from "sonner";
 import { Guard } from "@/components/Guard";
 import { Page } from "@/components/AppShell";
-import { Badge, Button, Card, Field, Spinner, Textarea } from "@/components/ui-kit";
+import { Badge, Button, Card, Field, Input, Spinner, Textarea } from "@/components/ui-kit";
 import { useI18n } from "@/lib/i18n";
 import { supabase } from "@/integrations/supabase/client";
 import { ORDER_FLOW, statusKey } from "@/lib/order-status";
@@ -37,6 +37,9 @@ function OrderDetail({ viewerRole, userId }: { viewerRole: Role; userId: string 
   const [busy, setBusy] = useState(false);
   const [category, setCategory] = useState<(typeof DISPUTE_CATEGORIES)[number]>("delivery_delay");
   const [description, setDescription] = useState("");
+  const [ratingStars, setRatingStars] = useState(0);
+  const [ratingComment, setRatingComment] = useState("");
+  const [ratingBusy, setRatingBusy] = useState(false);
 
   const { data, isLoading } = useQuery({
     queryKey: ["order", id],
@@ -58,15 +61,19 @@ function OrderDetail({ viewerRole, userId }: { viewerRole: Role; userId: string 
         .eq("order_id", id)
         .eq("filed_by", userId)
         .maybeSingle();
-      return { order: data, supplier, myDispute };
+      const { data: myRating } = await supabase
+        .from("ratings")
+        .select("id, stars, comment")
+        .eq("order_id", id)
+        .eq("rater_id", userId)
+        .eq("rater_role", "customer")
+        .maybeSingle();
+      return { order: data, supplier, myDispute, myRating };
     },
   });
 
   const status = data?.order.status;
 
-  // Supplier-side preparation advances automatically in this prototype.
-  // Everything from "received from supplier" onward is driven by the
-  // assigned delivery company, so the simulation stops at "verified".
   const AUTO_UNTIL = ORDER_FLOW.indexOf("verified");
   useEffect(() => {
     if (!status) return;
@@ -81,6 +88,12 @@ function OrderDetail({ viewerRole, userId }: { viewerRole: Role; userId: string 
     }, 8000);
     return () => clearTimeout(timer);
   }, [status, id, qc, AUTO_UNTIL]);
+
+  useEffect(() => {
+    if (!data?.myRating) return;
+    setRatingStars(data.myRating.stars);
+    setRatingComment(data.myRating.comment ?? "");
+  }, [data?.myRating]);
 
   const fileDispute = async () => {
     if (!description.trim()) {
@@ -106,6 +119,30 @@ function OrderDetail({ viewerRole, userId }: { viewerRole: Role; userId: string 
     await qc.invalidateQueries({ queryKey: ["order", id] });
   };
 
+  const publishRating = async () => {
+    if (viewerRole !== "customer" || status !== "delivered" || !data?.order.supplier_id) return;
+    if (!ratingStars) {
+      toast.error("Choose a star rating first.");
+      return;
+    }
+    setRatingBusy(true);
+    const { error } = await supabase.from("ratings").insert({
+      order_id: id,
+      rater_id: userId,
+      ratee_id: data.order.supplier_id,
+      rater_role: "customer",
+      stars: ratingStars,
+      comment: ratingComment.trim() || null,
+    });
+    setRatingBusy(false);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success("Your review has been published.");
+    await qc.invalidateQueries({ queryKey: ["order", id] });
+  };
+
   if (isLoading || !data) {
     return (
       <Page>
@@ -114,10 +151,11 @@ function OrderDetail({ viewerRole, userId }: { viewerRole: Role; userId: string 
     );
   }
 
-  const { order, supplier, myDispute } = data;
+  const { order, supplier, myDispute, myRating } = data;
   const currentIndex = ORDER_FLOW.indexOf(order.status as (typeof ORDER_FLOW)[number]);
   const eta = estimatedDelivery(order.created_at, order.offers?.delivery_days ?? 3, lang);
   const canFile = viewerRole === "customer" || viewerRole === "supplier";
+  const canRate = viewerRole === "customer" && order.status === "delivered";
 
   return (
     <Page title={t("orderStatus")}>
@@ -169,6 +207,49 @@ function OrderDetail({ viewerRole, userId }: { viewerRole: Role; userId: string 
         </ol>
         <p className="text-[11px] text-muted-foreground">{t("trackingSim")}</p>
       </Card>
+
+      {canRate && (
+        <Card className="space-y-4">
+          <div>
+            <p className="font-display font-semibold">Rate your supplier</p>
+            <p className="mt-1 text-xs text-muted-foreground">Share your experience after the order is delivered.</p>
+          </div>
+          {myRating ? (
+            <div className="space-y-2">
+              <div className="flex gap-1" aria-label={`Your rating: ${myRating.stars} out of 5`}>
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <Star key={star} className={`size-5 ${star <= myRating.stars ? "fill-current text-yellow-500" : "text-muted-foreground/40"}`} />
+                ))}
+              </div>
+              {myRating.comment && <p className="text-sm text-muted-foreground">{myRating.comment}</p>}
+              <p className="text-[11px] text-muted-foreground">Your review is published.</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <div className="flex gap-1" role="radiogroup" aria-label="Supplier rating">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <button
+                    key={star}
+                    type="button"
+                    onClick={() => setRatingStars(star)}
+                    aria-label={`${star} star${star > 1 ? "s" : ""}`}
+                    aria-pressed={ratingStars === star}
+                    className="rounded-md p-1 transition-transform hover:scale-110"
+                  >
+                    <Star className={`size-7 ${star <= ratingStars ? "fill-current text-yellow-500" : "text-muted-foreground/40"}`} />
+                  </button>
+                ))}
+              </div>
+              <Field label="Comment">
+                <Textarea rows={3} value={ratingComment} onChange={(e) => setRatingComment(e.target.value)} placeholder="Tell other customers about your experience" />
+              </Field>
+              <Button onClick={publishRating} disabled={ratingBusy || !ratingStars}>
+                {ratingBusy ? <Spinner /> : "Publish review"}
+              </Button>
+            </div>
+          )}
+        </Card>
+      )}
 
       {canFile && (
         <Card className="space-y-3">
