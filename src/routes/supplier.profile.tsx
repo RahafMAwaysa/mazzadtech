@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { Star } from "lucide-react";
 import { Guard } from "@/components/Guard";
 import { Page } from "@/components/AppShell";
 import { Badge, Button, Card, Field, Input, Spinner } from "@/components/ui-kit";
@@ -23,6 +24,14 @@ const CITIES = [
   ["Palestinian Interior", "الداخل الفلسطيني"],
 ] as const;
 
+type SupplierReview = {
+  id: string;
+  stars: number;
+  comment: string | null;
+  created_at: string;
+  reviewer_name: string | null;
+};
+
 export const Route = createFileRoute("/supplier/profile")({
   head: () => ({
     meta: [
@@ -36,6 +45,16 @@ export const Route = createFileRoute("/supplier/profile")({
   }),
   component: () => <Guard roles={["supplier", "admin"]}>{(ctx) => <Profile userId={ctx.userId} />}</Guard>,
 });
+
+function Stars({ value }: { value: number }) {
+  return (
+    <div className="flex gap-0.5" aria-label={`${value} out of 5 stars`}>
+      {[1, 2, 3, 4, 5].map((star) => (
+        <Star key={star} className={`size-4 ${star <= value ? "fill-current text-yellow-500" : "text-muted-foreground/30"}`} />
+      ))}
+    </div>
+  );
+}
 
 function Profile({ userId }: { userId: string }) {
   const { t, lang } = useI18n();
@@ -63,6 +82,18 @@ function Profile({ userId }: { userId: string }) {
       const { data, error } = await supabase.from("wallets").select("balance").eq("supplier_id", userId).maybeSingle();
       if (error) throw error;
       return data;
+    },
+  });
+
+  const { data: reviews = [] } = useQuery({
+    queryKey: ["supplier-own-reviews", userId],
+    enabled: !!data,
+    queryFn: async () => {
+      const { data: rows, error } = await (supabase as any).rpc("get_supplier_reviews", {
+        _supplier_id: userId,
+      });
+      if (error) throw error;
+      return (rows ?? []) as SupplierReview[];
     },
   });
 
@@ -184,7 +215,7 @@ function Profile({ userId }: { userId: string }) {
               {data.verified ? t("verified") : t("pendingVerification")}
             </Badge>
             <Badge>
-              {t("rating")}: {Number(data.rating).toFixed(1)}
+              {t("rating")}: {Number(data.rating) > 0 ? Number(data.rating).toFixed(1) : "No ratings yet"}
             </Badge>
             <Badge>
               {t("completedOrders")}: {data.completed_orders}
@@ -192,6 +223,31 @@ function Profile({ userId }: { userId: string }) {
           </div>
         )}
       </Card>
+
+      {reviews.length > 0 && (
+        <Card className="space-y-3">
+          <div>
+            <p className="font-display font-semibold">Customer reviews</p>
+            <p className="text-xs text-muted-foreground">Customer identities are hidden from suppliers.</p>
+          </div>
+          <div className="space-y-3">
+            {reviews.slice(0, 5).map((review) => (
+              <div key={review.id} className="rounded-xl border p-3 space-y-1.5">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="space-y-1">
+                    <Stars value={review.stars} />
+                    <p className="text-xs font-medium">Verified Customer</p>
+                  </div>
+                  <time className="text-[11px] text-muted-foreground" dateTime={review.created_at}>
+                    {new Date(review.created_at).toLocaleDateString()}
+                  </time>
+                </div>
+                {review.comment && <p className="text-sm text-muted-foreground">{review.comment}</p>}
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
 
       <Card className="space-y-3">
         <div className="flex items-center justify-between">
