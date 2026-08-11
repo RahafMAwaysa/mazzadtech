@@ -1,153 +1,131 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { FileText, WalletCards, ShoppingCart, Coins, Truck, Banknote } from "lucide-react";
+import { CalendarDays, FileText, Filter, SlidersHorizontal } from "lucide-react";
 import { Guard } from "@/components/Guard";
 import { Page } from "@/components/AppShell";
-import { Card, Spinner } from "@/components/ui-kit";
+import { Button, Card, Input, Spinner } from "@/components/ui-kit";
 import { supabase } from "@/integrations/supabase/client";
+import { useState } from "react";
 
 export const Route = createFileRoute("/admin/reports")({
   head: () => ({
     meta: [
-      { title: "Financial Report — MazzadTech" },
-      { name: "description", content: "Financial overview of paid orders, commissions, delivery fees and supplier wallets." },
+      { title: "Reports — MazzadTech" },
+      { name: "description", content: "Create a custom platform report when you need it." },
     ],
   }),
   component: () => <Guard roles={["admin"]}>{() => <Body />}</Guard>,
 });
 
-type ReportOrder = {
-  order_number: string;
-  amount: number | string;
-  commission: number | string;
-  customer_commission: number | string;
-  delivery_fee: number | string;
-  payment_status: string;
-  created_at: string;
+const REPORT_TYPES = ["Financial", "Orders", "Suppliers", "Customers", "Disputes"] as const;
+const DATE_PRESETS = ["Today", "This Week", "This Month", "This Year", "Custom"] as const;
+const ORDER_STATUSES = ["confirmed", "preparing", "verified", "received_from_supplier", "in_transit", "shipping", "delivered", "cancelled"] as const;
+
+const FIELDS: Record<(typeof REPORT_TYPES)[number], string[]> = {
+  Financial: ["Gross Sales", "Platform Revenue", "Supplier Payouts", "Supplier Wallet Balance", "Delivery Fees", "Commissions", "Order Details"],
+  Orders: ["Order Count", "Order Value", "Order Status", "Supplier", "Category", "Payment Status", "Created Date"],
+  Suppliers: ["Supplier Count", "Verified Suppliers", "Pending Verification", "Wallet Balance", "Completed Orders", "Response Rate"],
+  Customers: ["Customer Count", "Order Count", "Total Spending", "Average Order Value", "Delivery Preferences"],
+  Disputes: ["Dispute Count", "Open Disputes", "Resolved Disputes", "Categories", "Resolution Actions", "Resolution Time"],
 };
 
 function Body() {
-  const { data, isLoading, error } = useQuery({
-    queryKey: ["admin-financial-report"],
+  const [reportType, setReportType] = useState<(typeof REPORT_TYPES)[number]>("Financial");
+  const [datePreset, setDatePreset] = useState<(typeof DATE_PRESETS)[number]>("This Month");
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
+  const [category, setCategory] = useState("");
+  const [supplier, setSupplier] = useState("");
+  const [orderStatus, setOrderStatus] = useState("");
+  const [selectedFields, setSelectedFields] = useState<string[]>(FIELDS.Financial);
+  const [generated, setGenerated] = useState(false);
+
+  const { data: categories, isLoading: categoriesLoading } = useQuery({
+    queryKey: ["admin-report-categories"],
     queryFn: async () => {
-      const [ordersResult, walletResult, walletTransactionsResult] = await Promise.all([
-        supabase
-          .from("orders")
-          .select("order_number, amount, commission, customer_commission, delivery_fee, payment_status, created_at")
-          .eq("payment_status", "paid")
-          .order("created_at", { ascending: false }),
-        supabase.from("wallets").select("balance"),
-        supabase.from("wallet_transactions").select("amount, type").eq("type", "credit"),
-      ]);
-
-      if (ordersResult.error) throw ordersResult.error;
-      if (walletResult.error) throw walletResult.error;
-      if (walletTransactionsResult.error) throw walletTransactionsResult.error;
-
-      const orders = (ordersResult.data ?? []) as ReportOrder[];
-      const grossSales = orders.reduce((sum, order) => sum + Number(order.amount ?? 0), 0);
-      const supplierCommission = orders.reduce((sum, order) => sum + Number(order.commission ?? 0), 0);
-      const customerCommission = orders.reduce((sum, order) => sum + Number(order.customer_commission ?? 0), 0);
-      const deliveryFees = orders.reduce((sum, order) => sum + Number(order.delivery_fee ?? 0), 0);
-      const supplierPayouts = (walletTransactionsResult.data ?? []).reduce(
-        (sum, transaction) => sum + Number(transaction.amount ?? 0),
-        0,
-      );
-      const supplierWalletBalance = (walletResult.data ?? []).reduce(
-        (sum, wallet) => sum + Number(wallet.balance ?? 0),
-        0,
-      );
-
-      return {
-        orders,
-        grossSales,
-        supplierCommission,
-        customerCommission,
-        platformRevenue: supplierCommission + customerCommission,
-        deliveryFees,
-        supplierPayouts,
-        supplierWalletBalance,
-      };
+      const { data, error } = await supabase.from("categories").select("name").eq("active", true).order("name");
+      if (error) throw error;
+      return data ?? [];
     },
   });
 
-  if (isLoading) {
-    return (
-      <Page title="Financial Report">
-        <div className="grid place-items-center py-16 text-muted-foreground"><Spinner /></div>
-      </Page>
-    );
-  }
+  const { data: suppliers, isLoading: suppliersLoading } = useQuery({
+    queryKey: ["admin-report-suppliers"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("supplier_profiles").select("user_id, company_name").order("company_name");
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
 
-  if (error || !data) {
-    return (
-      <Page title="Financial Report">
-        <Card className="text-sm text-destructive">Could not load the financial report.</Card>
-      </Page>
-    );
-  }
+  const changeReportType = (value: (typeof REPORT_TYPES)[number]) => {
+    setReportType(value);
+    setSelectedFields(FIELDS[value]);
+    setGenerated(false);
+  };
 
-  const money = (value: number) => `${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  const percent = (value: number) => `${(value * 100).toLocaleString(undefined, { maximumFractionDigits: 2 })}%`;
+  const toggleField = (field: string) => {
+    setSelectedFields((current) => current.includes(field) ? current.filter((item) => item !== field) : [...current, field]);
+    setGenerated(false);
+  };
+
+  const generate = () => {
+    setGenerated(true);
+  };
 
   return (
-    <Page title="Financial Report">
+    <Page title="Reports">
       <Card className="space-y-1">
-        <div className="flex items-center gap-2 font-display font-semibold"><FileText className="size-5 text-primary" />Financial overview</div>
-        <p className="text-xs text-muted-foreground">Based on all orders currently marked as paid.</p>
+        <div className="flex items-center gap-2 font-display font-semibold"><FileText className="size-5 text-primary" />Generate a Report</div>
+        <p className="text-xs text-muted-foreground">Choose exactly what you need. Detailed data stays hidden until you request a report.</p>
       </Card>
 
-      <div className="grid grid-cols-2 gap-3">
-        <ReportStat icon={<ShoppingCart className="size-4" />} label="Paid Orders" value={data.orders.length.toLocaleString()} />
-        <ReportStat icon={<Banknote className="size-4" />} label="Gross Sales" value={money(data.grossSales)} />
-        <ReportStat icon={<Coins className="size-4" />} label="Platform Revenue" value={money(data.platformRevenue)} />
-        <ReportStat icon={<WalletCards className="size-4" />} label="Supplier Payouts" value={money(data.supplierPayouts)} />
-        <ReportStat icon={<WalletCards className="size-4" />} label="Supplier Wallet Balance" value={money(data.supplierWalletBalance)} />
-        <ReportStat icon={<Truck className="size-4" />} label="Delivery Fees" value={money(data.deliveryFees)} />
-      </div>
-
-      <Card className="space-y-3">
-        <div>
-          <h2 className="font-display font-semibold">Commission breakdown</h2>
-          <p className="text-xs text-muted-foreground">Actual commissions recorded on paid orders.</p>
-        </div>
-        <div className="grid grid-cols-2 gap-3 text-sm">
-          <div className="rounded-xl bg-muted p-3"><p className="text-xs text-muted-foreground">Supplier commission</p><p className="mt-1 font-semibold">{money(data.supplierCommission)}</p></div>
-          <div className="rounded-xl bg-muted p-3"><p className="text-xs text-muted-foreground">Customer commission</p><p className="mt-1 font-semibold">{money(data.customerCommission)}</p></div>
+      <Card className="space-y-4">
+        <div className="flex items-center gap-2 font-display font-semibold"><SlidersHorizontal className="size-4 text-primary" />Report type</div>
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+          {REPORT_TYPES.map((type) => <button key={type} type="button" onClick={() => changeReportType(type)} className={`rounded-xl border px-3 py-2.5 text-sm font-medium transition-colors ${reportType === type ? "border-primary bg-primary/10 text-primary" : "border-border bg-card text-muted-foreground hover:bg-muted/50"}`}>{type}</button>)}
         </div>
       </Card>
 
-      <Card className="space-y-3">
-        <h2 className="font-display font-semibold">Paid orders</h2>
-        {data.orders.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No paid orders yet.</p>
-        ) : (
-          <div className="space-y-2">
-            {data.orders.map((order) => (
-              <div key={order.order_number} className="rounded-xl border border-border p-3 text-sm">
-                <div className="flex items-center justify-between gap-3">
-                  <span className="font-medium">{order.order_number}</span>
-                  <span className="font-semibold">{money(Number(order.amount))}</span>
-                </div>
-                <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                  <span>Supplier commission: {money(Number(order.commission))} ({percent(Number(order.commission) / Number(order.amount || 1))})</span>
-                  <span>Customer commission: {money(Number(order.customer_commission))} ({percent(Number(order.customer_commission) / Number(order.amount || 1))})</span>
-                  <span>Delivery: {money(Number(order.delivery_fee))}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+      <Card className="space-y-4">
+        <div className="flex items-center gap-2 font-display font-semibold"><CalendarDays className="size-4 text-primary" />Date range</div>
+        <div className="flex flex-wrap gap-2">
+          {DATE_PRESETS.map((preset) => <button key={preset} type="button" onClick={() => setDatePreset(preset)} className={`rounded-full border px-3 py-1.5 text-xs font-medium ${datePreset === preset ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground"}`}>{preset}</button>)}
+        </div>
+        {datePreset === "Custom" && <div className="grid grid-cols-2 gap-3"><Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} /><Input type="date" value={to} onChange={(e) => setTo(e.target.value)} /></div>}
       </Card>
+
+      <Card className="space-y-4">
+        <div className="flex items-center gap-2 font-display font-semibold"><Filter className="size-4 text-primary" />Filters</div>
+        <div className="grid gap-3 sm:grid-cols-3">
+          <label className="space-y-1.5 text-xs font-medium text-muted-foreground">Category<select value={category} onChange={(e) => { setCategory(e.target.value); setGenerated(false); }} className="h-11 w-full rounded-xl border border-input bg-card px-3 text-sm text-foreground"><option value="">All categories</option>{categories?.map((item) => <option key={item.name} value={item.name}>{item.name}</option>)}</select></label>
+          <label className="space-y-1.5 text-xs font-medium text-muted-foreground">Supplier<select value={supplier} onChange={(e) => { setSupplier(e.target.value); setGenerated(false); }} className="h-11 w-full rounded-xl border border-input bg-card px-3 text-sm text-foreground"><option value="">All suppliers</option>{suppliers?.map((item) => <option key={item.user_id} value={item.user_id}>{item.company_name}</option>)}</select></label>
+          <label className="space-y-1.5 text-xs font-medium text-muted-foreground">Order status<select value={orderStatus} onChange={(e) => { setOrderStatus(e.target.value); setGenerated(false); }} className="h-11 w-full rounded-xl border border-input bg-card px-3 text-sm text-foreground"><option value="">All statuses</option>{ORDER_STATUSES.map((status) => <option key={status} value={status}>{status.replaceAll("_", " ")}</option>)}</select></label>
+        </div>
+      </Card>
+
+      <Card className="space-y-4">
+        <div><h2 className="font-display font-semibold">Information to include</h2><p className="text-xs text-muted-foreground">Select the sections you want in the generated report.</p></div>
+        <div className="grid gap-2 sm:grid-cols-2">
+          {FIELDS[reportType].map((field) => (
+            <label key={field} className="flex cursor-pointer items-center gap-3 rounded-xl border border-border p-3 text-sm hover:bg-muted/40">
+              <input type="checkbox" checked={selectedFields.includes(field)} onChange={() => toggleField(field)} className="size-4 accent-primary" />
+              <span>{field}</span>
+            </label>
+          ))}
+        </div>
+      </Card>
+
+      <Button className="w-full" onClick={generate} disabled={!selectedFields.length || categoriesLoading || suppliersLoading}>Generate Report</Button>
+
+      {generated && (
+        <Card className="space-y-2 border-primary/30 bg-primary/5">
+          <p className="font-display font-semibold">Report configuration ready</p>
+          <p className="text-xs text-muted-foreground">{reportType} · {datePreset}{datePreset === "Custom" ? ` · ${from || "—"} → ${to || "—"}` : ""}</p>
+          <p className="text-xs text-muted-foreground">{selectedFields.length} sections selected{category ? ` · Category: ${category}` : ""}{supplier ? " · Supplier selected" : ""}{orderStatus ? ` · Status: ${orderStatus.replaceAll("_", " ")}` : ""}.</p>
+          <p className="text-xs text-muted-foreground">The next step is to render this configuration as a report preview and then add Save / Download PDF.</p>
+        </Card>
+      )}
     </Page>
-  );
-}
-
-function ReportStat({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
-  return (
-    <Card className="space-y-1">
-      <span className="flex items-center gap-1.5 text-xs text-muted-foreground">{icon}{label}</span>
-      <p className="font-display text-lg font-semibold">{value}</p>
-    </Card>
   );
 }
