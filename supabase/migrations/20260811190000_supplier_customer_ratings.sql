@@ -65,6 +65,16 @@ CREATE POLICY "ratings_insert_own" ON public.ratings
     )
   );
 
+-- Do not expose rater_id through direct table reads. The public review UI uses
+-- get_supplier_reviews(), which masks customer identity for supplier viewers.
+DROP POLICY IF EXISTS "ratings_read" ON public.ratings;
+CREATE POLICY "ratings_read_own_or_admin" ON public.ratings
+  FOR SELECT TO authenticated
+  USING (
+    rater_id = auth.uid()
+    OR public.has_role(auth.uid(), 'admin')
+  );
+
 CREATE OR REPLACE FUNCTION public.get_supplier_reviews(_supplier_id uuid)
 RETURNS TABLE (
   id uuid,
