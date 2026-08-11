@@ -31,7 +31,10 @@ BEGIN
     WHERE user_id = supplier_user_id;
   END IF;
 
-  RETURN COALESCE(NEW, OLD);
+  IF TG_OP = 'DELETE' THEN
+    RETURN OLD;
+  END IF;
+  RETURN NEW;
 END;
 $$;
 
@@ -48,16 +51,16 @@ CREATE POLICY "ratings_insert_own" ON public.ratings
     AND EXISTS (
       SELECT 1
       FROM public.orders o
-      WHERE o.id = ratings.order_id
+      WHERE o.id = order_id
         AND o.status = 'delivered'
         AND (
           (o.customer_id = auth.uid()
-            AND ratings.rater_role = 'customer'
-            AND ratings.ratee_id = o.supplier_id)
+            AND rater_role = 'customer'
+            AND ratee_id = o.supplier_id)
           OR
           (o.supplier_id = auth.uid()
-            AND ratings.rater_role = 'supplier'
-            AND ratings.ratee_id = o.customer_id)
+            AND rater_role = 'supplier'
+            AND ratee_id = o.customer_id)
         )
     )
   );
