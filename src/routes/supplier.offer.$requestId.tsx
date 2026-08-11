@@ -1,14 +1,14 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { CheckCircle2, ImagePlus, Video, X } from "lucide-react";
+import { CheckCircle2, ImagePlus, X } from "lucide-react";
 import { toast } from "sonner";
 import { Guard } from "@/components/Guard";
 import { Page } from "@/components/AppShell";
 import { Badge, Button, Card, Field, Input, Spinner, Textarea } from "@/components/ui-kit";
 import { categoryLabel, useI18n } from "@/lib/i18n";
 import { supabase } from "@/integrations/supabase/client";
-import { fileToCompactDataUrl, shortId, videoFileToDataUrl } from "@/lib/auction";
+import { fileToCompactDataUrl, shortId } from "@/lib/auction";
 
 export const Route = createFileRoute("/supplier/offer/$requestId")({
   head: () => ({
@@ -32,7 +32,6 @@ function OfferForm({ userId }: { userId: string }) {
   const [busy, setBusy] = useState(false);
   const [images, setImages] = useState<string[]>([]);
   const [video, setVideo] = useState<string | null>(null);
-  const [videoBusy, setVideoBusy] = useState(false);
   const [priceError, setPriceError] = useState<string | null>(null);
   const [brandOptions, setBrandOptions] = useState<string[]>([]);
   const [brandOpen, setBrandOpen] = useState(false);
@@ -102,19 +101,6 @@ function OfferForm({ userId }: { userId: string }) {
     }
   };
 
-  const pickVideo = async (files: FileList | null) => {
-    const file = files?.[0];
-    if (!file) return;
-    setVideoBusy(true);
-    try {
-      setVideo(await videoFileToDataUrl(file));
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Could not read that video");
-    } finally {
-      setVideoBusy(false);
-    }
-  };
-
   const budgetMax = request?.budget_max != null ? Number(request.budget_max) : null;
   const price = Number(form.price || 0);
 
@@ -153,7 +139,7 @@ function OfferForm({ userId }: { userId: string }) {
         specs,
         images,
         image_url: images[0] ?? null,
-        video_url: video,
+        video_url: video?.trim() || null,
         price,
         warranty_months: Number(form.warranty_months) || 12,
         delivery_days: Number(form.delivery_days) || 3,
@@ -273,14 +259,15 @@ function OfferForm({ userId }: { userId: string }) {
             {images.length < 4 && <label className="grid size-16 cursor-pointer place-items-center rounded-xl border border-dashed border-border text-muted-foreground"><ImagePlus className="size-5" /><input type="file" accept="image/*" multiple className="hidden" onChange={(e) => void pickImages(e.target.files)} /></label>}
           </div>
         </div>
-        <div className="space-y-2">
-          <p className="text-xs font-medium text-muted-foreground">{t("uploadVideo")} <span className="text-muted-foreground/70">({t("optional")})</span></p>
-          {video ? (
-            <div className="relative w-40"><video src={video} className="w-40 rounded-xl" controls /><button type="button" aria-label="Remove video" onClick={() => setVideo(null)} className="absolute -end-1.5 -top-1.5 grid size-5 place-items-center rounded-full bg-destructive text-destructive-foreground"><X className="size-3" /></button></div>
-          ) : (
-            <label className="flex w-fit cursor-pointer items-center gap-2 rounded-xl border border-dashed border-border px-4 py-3 text-xs text-muted-foreground">{videoBusy ? <Spinner /> : <Video className="size-4" />}{t("uploadVideoHint")}<input type="file" accept="video/*" className="hidden" onChange={(e) => void pickVideo(e.target.files)} /></label>
-          )}
-        </div>
+        <Field label="Video URL (optional)">
+          <Input
+            type="url"
+            value={video ?? ""}
+            onChange={(e) => setVideo(e.target.value)}
+            placeholder="https://www.youtube.com/watch?v=..."
+          />
+          <p className="mt-1 text-[10px] text-muted-foreground">Paste a link to the product video instead of uploading a video file.</p>
+        </Field>
       </Card>
       <Button size="lg" className="w-full" onClick={submit} disabled={busy || !!priceError}>{busy ? <Spinner /> : t("submitOffer")}</Button>
     </Page>
