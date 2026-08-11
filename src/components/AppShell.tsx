@@ -13,6 +13,7 @@ import {
   Truck,
   AlertTriangle,
   UserRound,
+  FileText,
 } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { signOut, type Role } from "@/lib/session";
@@ -53,6 +54,7 @@ export function AppShell({
               { to: "/admin/suppliers", label: t("suppliers"), icon: <ShieldCheck className="size-5" /> },
               { to: "/admin/disputes", label: t("disputes"), icon: <AlertTriangle className="size-5" /> },
               { to: "/admin/orders", label: t("orders"), icon: <Package className="size-5" /> },
+              { to: "/admin/reports", label: "Reports", icon: <FileText className="size-5" /> },
             ]
           : [
               { to: "/", label: t("home"), icon: <Home className="size-5" /> },
