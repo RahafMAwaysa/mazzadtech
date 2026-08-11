@@ -40,6 +40,21 @@ function routeForRoles(roles: string[]) {
         : "/";
 }
 
+function passwordStrength(password: string) {
+  if (!password) return { score: 0, label: "", color: "bg-muted" };
+  let score = 0;
+  if (password.length >= 8) score++;
+  if (password.length >= 12) score++;
+  if (/[a-z]/.test(password) && /[A-Z]/.test(password)) score++;
+  if (/\d/.test(password)) score++;
+  if (/[^A-Za-z0-9]/.test(password)) score++;
+
+  if (score <= 1) return { score: 1, label: "Weak", color: "bg-destructive" };
+  if (score === 2) return { score: 2, label: "Fair", color: "bg-orange-500" };
+  if (score === 3) return { score: 3, label: "Good", color: "bg-yellow-500" };
+  return { score: 4, label: "Strong", color: "bg-green-500" };
+}
+
 function AuthPage() {
   const { t } = useI18n();
   const navigate = useNavigate();
@@ -54,6 +69,7 @@ function AuthPage() {
   const [adminMode, setAdminMode] = useState(false);
 
   const needsCompany = role === "supplier" || role === "delivery";
+  const strength = passwordStrength(password);
 
   useEffect(() => {
     void (async () => {
@@ -262,6 +278,19 @@ function AuthPage() {
                 minLength={6}
                 autoComplete={mode === "in" ? "current-password" : "new-password"}
               />
+              {mode === "up" && password && (
+                <div className="mt-2 space-y-1.5" aria-live="polite">
+                  <div className="flex gap-1">
+                    {[1, 2, 3, 4].map((segment) => (
+                      <div
+                        key={segment}
+                        className={`h-1.5 flex-1 rounded-full ${segment <= strength.score ? strength.color : "bg-muted"}`}
+                      />
+                    ))}
+                  </div>
+                  <p className="text-xs text-muted-foreground">{strength.label}</p>
+                </div>
+              )}
             </Field>
 
             <Button type="submit" size="lg" className="w-full" disabled={busy}>
@@ -290,7 +319,7 @@ function GoogleIcon() {
   return (
     <svg viewBox="0 0 24 24" className="size-4">
       <path fill="#4285F4" d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.5h6.4c-.3 1.5-1.2 2.7-2.5 3.6v3h4.3c2.5-2.3 3.3-5.6 3.3-8.8z" />
-      <path fill="#34A853" d="M12 24c3.2 0 5.9-1.1 7.9-2.9l-4.3-3c-1.1.8-2.6 1.3-4.3 1.3-3.3 0-6.1-2.2-7.1-5.2H.4v3.1C2.4 21.5 6.9 24 12 24z" />
+      <path fill="#34A853" d="M12 24c3.2 0 5.9-1.1 7.9-2.9l-4.3-3c-1.1.8-2.6 1.3-4.3 1.3-3.3 0-6.1-2.2-7.1-5.2H.4v3.1C-.1 8 -.4 9.9-.4 11.8s.3 3.8.8 5.5l4.5-3.1z" />
       <path fill="#FBBC05" d="M4.9 14.2c-.3-.8-.4-1.6-.4-2.4s.1-1.6.4-2.4V6.3H.4C-.1 8 -.4 9.9-.4 11.8s.3 3.8.8 5.5l4.5-3.1z" />
       <path fill="#EA4335" d="M12 4.8c1.8 0 3.4.6 4.7 1.8l3.6-3.6C18.1 1.1 15.3 0 12 0 6.9 0 2.4 2.5.4 6.3l4.5 3.1c1-3 3.8-4.6 7.1-4.6z" />
     </svg>
