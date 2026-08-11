@@ -24,8 +24,7 @@ const PURPOSES = [
 ] as const;
 
 const DELIVERY_OPTIONS = ["Deliver", "Hand-to-hand receipt"] as const;
-const BUDGET_SLIDER_MAX = 50000;
-const BUDGET_STEP = 50;
+const BUDGET_INPUT_MAX = 50000;
 
 type RequestDraft = ExtractedRequest & { purposes: string[] };
 
@@ -128,8 +127,8 @@ function Assistant({ userId }: { userId: string }) {
         customer_id: userId,
         title: draft.title,
         category: draft.category,
-        budget_min: draft.budget_min,
-        budget_max: draft.budget_max,
+        budget_min: 0,
+        budget_max: Number(draft.budget_max ?? 0),
         specs: draft.specs,
         purpose: finalPurposes.join(", "),
         purposes: finalPurposes,
@@ -158,11 +157,7 @@ function Assistant({ userId }: { userId: string }) {
   };
 
   if (draft) {
-    const rawMin = Number(draft.budget_min ?? 0);
-    const rawMax = Number(draft.budget_max ?? BUDGET_SLIDER_MAX);
-    const sliderMax = Math.max(BUDGET_SLIDER_MAX, rawMax, rawMin + BUDGET_STEP);
-    const budgetMin = Math.min(Math.max(rawMin, 0), sliderMax - BUDGET_STEP);
-    const budgetMax = Math.min(Math.max(rawMax, budgetMin + BUDGET_STEP), sliderMax);
+    const budgetMax = Math.min(Math.max(Number(draft.budget_max ?? 0), 0), BUDGET_INPUT_MAX);
 
     return (
       <Page title={t("summaryTitle")}>
@@ -174,18 +169,19 @@ function Assistant({ userId }: { userId: string }) {
           </Field>
           <Field label={t("newRequest")}><Input value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} /></Field>
 
-          <Field label={t("budget")}>
-            <div className="space-y-4 rounded-xl border border-input bg-card px-3 py-4">
-              <div>
-                <div className="mb-1 flex justify-between text-xs"><span className="text-muted-foreground">Minimum</span><span className="font-semibold">{budgetMin.toLocaleString()} {t("currency")}</span></div>
-                <input type="range" min={0} max={sliderMax - BUDGET_STEP} step={BUDGET_STEP} value={budgetMin} onChange={(e) => { const next = Number(e.target.value); setDraft({ ...draft, budget_min: next, budget_max: Math.max(budgetMax, next + BUDGET_STEP) }); }} className="w-full accent-primary" />
-              </div>
-              <div>
-                <div className="mb-1 flex justify-between text-xs"><span className="text-muted-foreground">Maximum</span><span className="font-semibold">{budgetMax.toLocaleString()} {t("currency")}</span></div>
-                <input type="range" min={budgetMin + BUDGET_STEP} max={sliderMax} step={BUDGET_STEP} value={budgetMax} onChange={(e) => setDraft({ ...draft, budget_max: Number(e.target.value) })} className="w-full accent-primary" />
-              </div>
-              <div className="flex justify-between text-[10px] text-muted-foreground"><span>0</span><span>{sliderMax.toLocaleString()} {t("currency")}</span></div>
-            </div>
+          <Field label="Maximum Budget">
+            <Input
+              inputMode="decimal"
+              type="number"
+              min={0}
+              max={BUDGET_INPUT_MAX}
+              value={budgetMax || ""}
+              onChange={(e) => {
+                const value = Math.min(Math.max(Number(e.target.value || 0), 0), BUDGET_INPUT_MAX);
+                setDraft({ ...draft, budget_min: 0, budget_max: value });
+              }}
+              placeholder={`Maximum (${t("currency")})`}
+            />
           </Field>
 
           <Field label={t("specs")}><Textarea rows={4} value={draft.specs.join("\n")} onChange={(e) => setDraft({ ...draft, specs: e.target.value.split("\n").filter(Boolean) })} /></Field>
