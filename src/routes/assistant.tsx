@@ -11,6 +11,22 @@ import { CATEGORIES, categoryLabel, useI18n } from "@/lib/i18n";
 import { supabase } from "@/integrations/supabase/client";
 import { extractRequest, type ExtractedRequest } from "@/lib/requests.functions";
 
+const PURPOSES = [
+  "Programming & Development",
+  "Graphic & Visual Design",
+  "Office & Administrative Work",
+  "Web Browsing & Communication",
+  "Content Creation & Editing",
+  "Studying & Academic Research",
+  "Gaming & Entertainment",
+  "Data Analysis & Processing",
+  "Video Editing & Post-Production",
+] as const;
+
+const DELIVERY_OPTIONS = ["Deliver", "Hand-to-hand receipt"] as const;
+
+type RequestDraft = ExtractedRequest & { purposes: string[] };
+
 export const Route = createFileRoute("/assistant")({
   head: () => ({
     meta: [
@@ -30,9 +46,11 @@ function Assistant({ userId }: { userId: string }) {
   const { t, lang } = useI18n();
   const navigate = useNavigate();
   const [input, setInput] = useState("");
-  const [draft, setDraft] = useState<ExtractedRequest | null>(null);
+  const [draft, setDraft] = useState<RequestDraft | null>(null);
   const [reviewing, setReviewing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [brandOptions, setBrandOptions] = useState<string[]>([]);
+  const [brandOther, setBrandOther] = useState("");
   const endRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -50,6 +68,16 @@ function Assistant({ userId }: { userId: string }) {
   useEffect(() => {
     if (!busy && !draft) inputRef.current?.focus();
   }, [busy, draft]);
+
+  useEffect(() => {
+    if (!draft) return;
+    const loadBrands = async () => {
+      const db = supabase as any;
+      const { data, error } = await db.from("brands").select("name").eq("active", true).order("name");
+      if (!error) setBrandOptions((data ?? []).map((b: { name: string }) => b.name));
+    };
+    void loadBrands();
+  }, [draft]);
 
   const textOf = (m: (typeof messages)[number]) =>
     m.parts.map((p) => (p.type === "text" ? p.text : "")).join("");
@@ -70,7 +98,7 @@ function Assistant({ userId }: { userId: string }) {
         .map((m) => `${m.role === "user" ? "Customer" : "Assistant"}: ${textOf(m)}`)
         .join("\n");
       const result = await extractRequest({ data: { transcript, lang } });
-      setDraft(result);
+      setDraft({ ...result, purposes: result.purpose ? [result.purpose] : [] });
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Could not read the request");
     } finally {
@@ -78,11 +106,43 @@ function Assistant({ userId }: { userId: string }) {
     }
   };
 
+  const toggleBrand = (brand: string) => {
+    if (!draft) return;
+    setDraft({
+      ...draft,
+      brands: draft.brands.includes(brand)
+        ? draft.brands.filter((b) => b !== brand)
+        : [...draft.brands, brand],
+    });
+  };
+
+  const togglePurpose = (purpose: string) => {
+    if (!draft) return;
+    setDraft({
+      ...draft,
+      purposes: draft.purposes.includes(purpose)
+        ? draft.purposes.filter((p) => p !== purpose)
+        : [...draft.purposes, purpose],
+    });
+  };
+
   const confirm = async () => {
     if (!draft) return;
     setSaving(true);
     try {
-      const { data, error } = await supabase
+      const customBrand = brandOther.trim();
+      const brands = customBrand && !draft.brands.includes(customBrand)
+        ? [...draft.brands, customBrand]
+        : draft.brands;
+      const purposes = draft.purposes.length ? draft.purposes : draft.purpose ? [draft.purpose] : [];
+
+      if (customBrand) {
+        const db = supabase as any;
+        const { error: brandError } = await db.from("brands").insert({ name: customBrand, active: true });
+        if (brandError && !String(brandError.message).toLowerCase().includes("duplicate")) throw brandError;
+      }
+
+      const { data, error } = await (supabase as any)
         .from("purchase_requests")
         .insert({
           customer_id: userId,
@@ -91,8 +151,9 @@ function Assistant({ userId }: { userId: string }) {
           budget_min: draft.budget_min,
           budget_max: draft.budget_max,
           specs: draft.specs,
-          purpose: draft.purpose,
-          brands: draft.brands,
+          purpose: purposes.join(", "),
+          purposes,
+          brands,
           warranty_preference: draft.warranty_preference,
           delivery_preference: draft.delivery_preference,
           notes: draft.notes,
@@ -129,9 +190,7 @@ function Assistant({ userId }: { userId: string }) {
               className="h-11 w-full rounded-xl border border-input bg-card px-3 text-sm"
             >
               {CATEGORIES.map((c) => (
-                <option key={c} value={c}>
-                  {categoryLabel[c]?.[lang]}
-                </option>
+                <option key={c} value={c}>{categoryLabel[c]?.[lang]}</option>
               ))}
             </select>
           </Field>
@@ -140,68 +199,73 @@ function Assistant({ userId }: { userId: string }) {
           </Field>
           <div className="grid grid-cols-2 gap-3">
             <Field label={`${t("budget")} (min)`}>
-              <Input
-                type="number"
-                value={draft.budget_min ?? ""}
-                onChange={(e) =>
-                  setDraft({ ...draft, budget_min: e.target.value ? Number(e.target.value) : null })
-                }
-              />
+              <Input type="number" value={draft.budget_min ?? ""} onChange={(e) => setDraft({ ...draft, budget_min: e.target.value ? Number(e.target.value) : null })} />
             </Field>
             <Field label={`${t("budget")} (max)`}>
-              <Input
-                type="number"
-                value={draft.budget_max ?? ""}
-                onChange={(e) =>
-                  setDraft({ ...draft, budget_max: e.target.value ? Number(e.target.value) : null })
-                }
-              />
+              <Input type="number" value={draft.budget_max ?? ""} onChange={(e) => setDraft({ ...draft, budget_max: e.target.value ? Number(e.target.value) : null })} />
             </Field>
           </div>
           <Field label={t("specs")}>
-            <Textarea
-              rows={4}
-              value={draft.specs.join("\n")}
-              onChange={(e) => setDraft({ ...draft, specs: e.target.value.split("\n").filter(Boolean) })}
-            />
+            <Textarea rows={4} value={draft.specs.join("\n")} onChange={(e) => setDraft({ ...draft, specs: e.target.value.split("\n").filter(Boolean) })} />
           </Field>
+
           <Field label={t("purpose")}>
-            <Input
-              value={draft.purpose ?? ""}
-              onChange={(e) => setDraft({ ...draft, purpose: e.target.value })}
-            />
+            <div className="flex flex-wrap gap-2">
+              {PURPOSES.map((purpose) => {
+                const selected = draft.purposes.includes(purpose);
+                return (
+                  <button key={purpose} type="button" onClick={() => togglePurpose(purpose)} className={`rounded-full border px-3 py-1.5 text-xs font-medium ${selected ? "border-primary bg-primary-soft text-primary" : "border-border bg-card text-muted-foreground"}`}>
+                    {purpose}
+                  </button>
+                );
+              })}
+              <button type="button" onClick={() => togglePurpose("Other")} className={`rounded-full border px-3 py-1.5 text-xs font-medium ${draft.purposes.includes("Other") ? "border-primary bg-primary-soft text-primary" : "border-border bg-card text-muted-foreground"}`}>
+                Other
+              </button>
+            </div>
+            {draft.purposes.includes("Other") && (
+              <Input
+                className="mt-2"
+                placeholder="Write your purpose"
+                value={draft.purposes.find((p) => p !== "Other" && !PURPOSES.includes(p as (typeof PURPOSES)[number])) ?? ""}
+                onChange={(e) => setDraft({ ...draft, purposes: [...draft.purposes.filter((p) => p === "Other" || PURPOSES.includes(p as (typeof PURPOSES)[number])), e.target.value].filter(Boolean) })}
+              />
+            )}
           </Field>
+
           <Field label={t("brands")}>
-            <Input
-              value={draft.brands.join(", ")}
-              onChange={(e) =>
-                setDraft({
-                  ...draft,
-                  brands: e.target.value.split(",").map((b) => b.trim()).filter(Boolean),
-                })
-              }
-            />
+            <div className="flex flex-wrap gap-2">
+              {brandOptions.map((brand) => {
+                const selected = draft.brands.includes(brand);
+                return (
+                  <button key={brand} type="button" onClick={() => toggleBrand(brand)} className={`rounded-full border px-3 py-1.5 text-xs font-medium ${selected ? "border-primary bg-primary-soft text-primary" : "border-border bg-card text-muted-foreground"}`}>
+                    {brand}
+                  </button>
+                );
+              })}
+              <button type="button" onClick={() => setBrandOther(brandOther ? "" : " ")} className={`rounded-full border px-3 py-1.5 text-xs font-medium ${brandOther ? "border-primary bg-primary-soft text-primary" : "border-border bg-card text-muted-foreground"}`}>
+                Other
+              </button>
+            </div>
+            {brandOther !== "" && (
+              <Input className="mt-2" placeholder="Write another brand" value={brandOther.trim()} onChange={(e) => setBrandOther(e.target.value)} />
+            )}
+            {draft.brands.length > 0 && <p className="text-[11px] text-muted-foreground">Selected: {draft.brands.join(", ")}</p>}
           </Field>
+
           <div className="grid grid-cols-2 gap-3">
             <Field label={t("warranty")}>
-              <Input
-                value={draft.warranty_preference ?? ""}
-                onChange={(e) => setDraft({ ...draft, warranty_preference: e.target.value })}
-              />
+              <Input value={draft.warranty_preference ?? ""} onChange={(e) => setDraft({ ...draft, warranty_preference: e.target.value })} />
             </Field>
             <Field label={t("delivery")}>
-              <Input
-                value={draft.delivery_preference ?? ""}
-                onChange={(e) => setDraft({ ...draft, delivery_preference: e.target.value })}
-              />
+              <select value={draft.delivery_preference ?? ""} onChange={(e) => setDraft({ ...draft, delivery_preference: e.target.value })} className="h-11 w-full rounded-xl border border-input bg-card px-3 text-sm">
+                <option value="">Select</option>
+                {DELIVERY_OPTIONS.map((option) => <option key={option} value={option}>{option}</option>)}
+              </select>
             </Field>
           </div>
           <Field label={t("notes")}>
-            <Textarea
-              rows={2}
-              value={draft.notes ?? ""}
-              onChange={(e) => setDraft({ ...draft, notes: e.target.value })}
-            />
+            <Textarea rows={2} value={draft.notes ?? ""} onChange={(e) => setDraft({ ...draft, notes: e.target.value })} />
           </Field>
         </Card>
 
@@ -223,65 +287,24 @@ function Assistant({ userId }: { userId: string }) {
     <div className="flex min-h-[calc(100vh-9rem)] flex-col">
       <div className="flex-1 space-y-4 px-4 py-5">
         <div className="flex items-start gap-2">
-          <span className="grid size-8 shrink-0 place-items-center rounded-xl bg-primary-soft text-primary">
-            <Bot className="size-4" />
-          </span>
+          <span className="grid size-8 shrink-0 place-items-center rounded-xl bg-primary-soft text-primary"><Bot className="size-4" /></span>
           <p className="max-w-[85%] text-sm leading-relaxed">{t("assistantIntro")}</p>
         </div>
-
         {messages.map((m) => (
-          <div
-            key={m.id}
-            className={m.role === "user" ? "flex justify-end" : "flex items-start gap-2"}
-          >
-            {m.role !== "user" && (
-              <span className="grid size-8 shrink-0 place-items-center rounded-xl bg-primary-soft text-primary">
-                <Bot className="size-4" />
-              </span>
-            )}
-            <div
-              className={
-                m.role === "user"
-                  ? "max-w-[85%] rounded-2xl bg-primary px-3.5 py-2.5 text-sm text-primary-foreground"
-                  : "max-w-[85%] whitespace-pre-wrap text-sm leading-relaxed text-foreground"
-              }
-            >
-              {textOf(m)}
-            </div>
-            {m.role === "user" && (
-              <span className="ms-2 grid size-8 shrink-0 place-items-center rounded-xl bg-muted text-muted-foreground">
-                <User2 className="size-4" />
-              </span>
-            )}
+          <div key={m.id} className={m.role === "user" ? "flex justify-end" : "flex items-start gap-2"}>
+            {m.role !== "user" && <span className="grid size-8 shrink-0 place-items-center rounded-xl bg-primary-soft text-primary"><Bot className="size-4" /></span>}
+            <div className={m.role === "user" ? "max-w-[85%] rounded-2xl bg-primary px-3.5 py-2.5 text-sm text-primary-foreground" : "max-w-[85%] whitespace-pre-wrap text-sm leading-relaxed text-foreground"}>{textOf(m)}</div>
+            {m.role === "user" && <span className="ms-2 grid size-8 shrink-0 place-items-center rounded-xl bg-muted text-muted-foreground"><User2 className="size-4" /></span>}
           </div>
         ))}
-
-        {busy && (
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Bot className="size-4 animate-pulse" />
-            {t("thinking")}
-          </div>
-        )}
+        {busy && <div className="flex items-center gap-2 text-sm text-muted-foreground"><Bot className="size-4 animate-pulse" />{t("thinking")}</div>}
         <div ref={endRef} />
       </div>
-
       <div className="sticky bottom-20 space-y-3 bg-background/90 px-4 py-3 backdrop-blur">
-        {messages.length >= 2 && (
-          <Button variant="outline" className="w-full" onClick={review} disabled={reviewing}>
-            {reviewing ? <Spinner /> : <Sparkles className="size-4" />}
-            {t("summarize")}
-          </Button>
-        )}
+        {messages.length >= 2 && <Button variant="outline" className="w-full" onClick={review} disabled={reviewing}>{reviewing ? <Spinner /> : <Sparkles className="size-4" />}{t("summarize")}</Button>}
         <form onSubmit={submit} className="flex items-center gap-2">
-          <Input
-            ref={inputRef}
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder={t("heroTitle")}
-          />
-          <Button type="submit" size="icon" disabled={busy || !input.trim()} aria-label={t("send")}>
-            <Send className="size-4" />
-          </Button>
+          <Input ref={inputRef} value={input} onChange={(e) => setInput(e.target.value)} placeholder={t("heroTitle")} />
+          <Button type="submit" size="icon" disabled={busy || !input.trim()} aria-label={t("send")}><Send className="size-4" /></Button>
         </form>
       </div>
     </div>
