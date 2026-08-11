@@ -5,7 +5,7 @@ import { Check, MessageSquareWarning, Star } from "lucide-react";
 import { toast } from "sonner";
 import { Guard } from "@/components/Guard";
 import { Page } from "@/components/AppShell";
-import { Badge, Button, Card, Field, Input, Spinner, Textarea } from "@/components/ui-kit";
+import { Badge, Button, Card, Field, Spinner, Textarea } from "@/components/ui-kit";
 import { useI18n } from "@/lib/i18n";
 import { supabase } from "@/integrations/supabase/client";
 import { ORDER_FLOW, statusKey } from "@/lib/order-status";
