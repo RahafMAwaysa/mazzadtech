@@ -40,7 +40,6 @@ export function AppShell({
       ? [
           { to: "/supplier", label: t("openRequests"), icon: <ClipboardList className="size-5" /> },
           { to: "/supplier/offers", label: t("myOffers"), icon: <Store className="size-5" /> },
-          { to: "/supplier/orders", label: t("orders"), icon: <Package className="size-5" /> },
           { to: "/supplier/profile", label: t("profile"), icon: <ShieldCheck className="size-5" /> },
         ]
       : role === "delivery"
