@@ -6,7 +6,7 @@ import { Send, Sparkles, Pencil, Check, Bot, User2 } from "lucide-react";
 import { toast } from "sonner";
 import { Guard } from "@/components/Guard";
 import { Page } from "@/components/AppShell";
-import { Badge, Button, Card, Field, Input, Spinner, Textarea } from "@/components/ui-kit";
+import { Button, Card, Field, Input, Spinner, Textarea } from "@/components/ui-kit";
 import { CATEGORIES, categoryLabel, useI18n } from "@/lib/i18n";
 import { supabase } from "@/integrations/supabase/client";
 import { extractRequest, type ExtractedRequest } from "@/lib/requests.functions";
