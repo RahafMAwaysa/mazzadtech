@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { CalendarDays, FileText, Filter, SlidersHorizontal } from "lucide-react";
 import { Guard } from "@/components/Guard";
 import { Page } from "@/components/AppShell";
-import { Button, Card, Input, Spinner } from "@/components/ui-kit";
+import { Button, Card, Input } from "@/components/ui-kit";
 import { supabase } from "@/integrations/supabase/client";
 import { useState } from "react";
 
@@ -30,7 +30,7 @@ const FIELDS: Record<(typeof REPORT_TYPES)[number], string[]> = {
 };
 
 function Body() {
-  const [reportType, setReportType] = useState<(typeof REPORT_TYPES)[number]>("Financial");
+  const [reportTypes, setReportTypes] = useState<(typeof REPORT_TYPES)[number][]>(["Financial"]);
   const [datePreset, setDatePreset] = useState<(typeof DATE_PRESETS)[number]>("This Month");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
@@ -58,32 +58,44 @@ function Body() {
     },
   });
 
-  const changeReportType = (value: (typeof REPORT_TYPES)[number]) => {
-    setReportType(value);
-    setSelectedFields(FIELDS[value]);
+  const toggleReportType = (type: (typeof REPORT_TYPES)[number]) => {
+    setReportTypes((current) => {
+      if (current.includes(type)) {
+        if (current.length === 1) return current;
+        const next = current.filter((item) => item !== type);
+        setSelectedFields((fields) => fields.filter((field) => next.some((selectedType) => FIELDS[selectedType].includes(field))));
+        return next;
+      }
+      const next = [...current, type];
+      setSelectedFields((fields) => Array.from(new Set([...fields, ...FIELDS[type]])));
+      return next;
+    });
     setGenerated(false);
   };
+
+  const availableFields = Array.from(new Set(reportTypes.flatMap((type) => FIELDS[type])));
 
   const toggleField = (field: string) => {
     setSelectedFields((current) => current.includes(field) ? current.filter((item) => item !== field) : [...current, field]);
     setGenerated(false);
   };
 
-  const generate = () => {
-    setGenerated(true);
-  };
+  const generate = () => setGenerated(true);
 
   return (
     <Page title="Reports">
       <Card className="space-y-1">
         <div className="flex items-center gap-2 font-display font-semibold"><FileText className="size-5 text-primary" />Generate a Report</div>
-        <p className="text-xs text-muted-foreground">Choose exactly what you need. Detailed data stays hidden until you request a report.</p>
+        <p className="text-xs text-muted-foreground">Choose one or more report types. Detailed data stays hidden until you request a report.</p>
       </Card>
 
       <Card className="space-y-4">
-        <div className="flex items-center gap-2 font-display font-semibold"><SlidersHorizontal className="size-4 text-primary" />Report type</div>
+        <div className="flex items-center gap-2 font-display font-semibold"><SlidersHorizontal className="size-4 text-primary" />Report type <span className="text-xs font-normal text-muted-foreground">(select multiple)</span></div>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-          {REPORT_TYPES.map((type) => <button key={type} type="button" onClick={() => changeReportType(type)} className={`rounded-xl border px-3 py-2.5 text-sm font-medium transition-colors ${reportType === type ? "border-primary bg-primary/10 text-primary" : "border-border bg-card text-muted-foreground hover:bg-muted/50"}`}>{type}</button>)}
+          {REPORT_TYPES.map((type) => {
+            const selected = reportTypes.includes(type);
+            return <button key={type} type="button" onClick={() => toggleReportType(type)} aria-pressed={selected} className={`rounded-xl border px-3 py-2.5 text-sm font-medium transition-colors ${selected ? "border-primary bg-primary/10 text-primary" : "border-border bg-card text-muted-foreground hover:bg-muted/50"}`}>{type}</button>;
+          })}
         </div>
       </Card>
 
@@ -107,7 +119,7 @@ function Body() {
       <Card className="space-y-4">
         <div><h2 className="font-display font-semibold">Information to include</h2><p className="text-xs text-muted-foreground">Select the sections you want in the generated report.</p></div>
         <div className="grid gap-2 sm:grid-cols-2">
-          {FIELDS[reportType].map((field) => (
+          {availableFields.map((field) => (
             <label key={field} className="flex cursor-pointer items-center gap-3 rounded-xl border border-border p-3 text-sm hover:bg-muted/40">
               <input type="checkbox" checked={selectedFields.includes(field)} onChange={() => toggleField(field)} className="size-4 accent-primary" />
               <span>{field}</span>
@@ -121,7 +133,7 @@ function Body() {
       {generated && (
         <Card className="space-y-2 border-primary/30 bg-primary/5">
           <p className="font-display font-semibold">Report configuration ready</p>
-          <p className="text-xs text-muted-foreground">{reportType} · {datePreset}{datePreset === "Custom" ? ` · ${from || "—"} → ${to || "—"}` : ""}</p>
+          <p className="text-xs text-muted-foreground">{reportTypes.join(" + ")} · {datePreset}{datePreset === "Custom" ? ` · ${from || "—"} → ${to || "—"}` : ""}</p>
           <p className="text-xs text-muted-foreground">{selectedFields.length} sections selected{category ? ` · Category: ${category}` : ""}{supplier ? " · Supplier selected" : ""}{orderStatus ? ` · Status: ${orderStatus.replaceAll("_", " ")}` : ""}.</p>
           <p className="text-xs text-muted-foreground">The next step is to render this configuration as a report preview and then add Save / Download PDF.</p>
         </Card>
