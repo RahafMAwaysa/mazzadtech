@@ -49,6 +49,7 @@ function AuthPage() {
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [company, setCompany] = useState("");
+  const [phone, setPhone] = useState("");
   const [busy, setBusy] = useState(false);
   const [adminMode, setAdminMode] = useState(false);
 
@@ -66,6 +67,7 @@ function AuthPage() {
           const pending = JSON.parse(pendingRaw) as {
             role: string;
             company_name: string | null;
+            phone: string | null;
           };
           await supabase.auth.updateUser({ data: pending });
         } catch {
@@ -91,6 +93,7 @@ function AuthPage() {
         JSON.stringify({
           role,
           company_name: needsCompany ? company || null : null,
+          phone: phone || null,
         }),
       );
     }
@@ -131,6 +134,7 @@ function AuthPage() {
               full_name: fullName,
               role,
               company_name: needsCompany ? company : null,
+              phone: phone || null,
             },
           },
         });
@@ -165,11 +169,11 @@ function AuthPage() {
           )}
 
           <div className={`grid-cols-2 rounded-xl bg-muted p-1 text-sm ${adminMode ? "hidden" : "grid"}`}>
-            {(["in", "up"] as const).map((m) => (
+            {["in", "up"].map((m) => (
               <button
                 key={m}
                 type="button"
-                onClick={() => setMode(m)}
+                onClick={() => setMode(m as "in" | "up")}
                 className={`rounded-lg py-2 font-medium transition-colors ${
                   mode === m ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"
                 }`}
@@ -214,6 +218,10 @@ function AuthPage() {
                     <Input value={company} onChange={(e) => setCompany(e.target.value)} required />
                   </Field>
                 )}
+
+                <Field label={`${t("phone")} (optional)`}>
+                  <Input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} autoComplete="tel" />
+                </Field>
               </>
             )}
 
@@ -283,9 +291,9 @@ function GoogleIcon() {
   return (
     <svg viewBox="0 0 24 24" className="size-4">
       <path fill="#4285F4" d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.5h6.4c-.3 1.5-1.2 2.7-2.5 3.6v3h4.3c2.5-2.3 3.3-5.6 3.3-8.8z" />
-      <path fill="#34A853" d="M12 24c3.2 0 5.9-1.1 7.9-2.9l-4.3-3c-1.1.8-2.6 1.3-4.3 1.3-3.3 0-6.1-2.2-7.1-5.2H.4v3.1C2.4 21.5 6.9 24 12 24z" />
-      <path fill="#FBBC05" d="M4.9 14.2c-.3-.8-.4-1.6-.4-2.4s.1-1.6.4-2.4V6.3H.4C-.1 8 -.4 9.9-.4 11.8s.3 3.8.8 5.5l4.5-3.1z" />
+      <path fill="#34A853" d="M12 24c3.2 0 5.9-1.1 7.9-2.9l-4.3-3c-1.1.8-2.6 1.3-4.3 1.3-3.3 0-6.1-2.2-7.1-5.2H.4v3.1C-.1 8 0 9.9.4 11.8s.3 3.8.8 5.5l4.5-3.1z" />
       <path fill="#EA4335" d="M12 4.8c1.8 0 3.4.6 4.7 1.8l3.6-3.6C18.1 1.1 15.3 0 12 0 6.9 0 2.4 2.5.4 6.3l4.5 3.1c1-3 3.8-4.6 7.1-4.6z" />
+      <path fill="#FBBC05" d="M4.9 14.2c-.3-.8-.4-1.6-.4-2.4s.1-1.6.4-2.4V6.3H.4C-.1 8 -.4 9.9-.4 11.8s.3 3.8.8 5.5l4.5-3.1z" />
     </svg>
   );
 }
