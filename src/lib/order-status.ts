@@ -6,6 +6,7 @@ export const ORDER_FLOW = [
   "in_transit",
   "shipping",
   "delivered",
+  "completed",
 ] as const;
 
 export type OrderStatus = (typeof ORDER_FLOW)[number] | "cancelled";
@@ -21,6 +22,7 @@ export type StatusKey =
   | "inTransit"
   | "shipping"
   | "delivered"
+  | "completed"
   | "cancelled";
 
 const MAP: Record<string, StatusKey> = {
@@ -31,6 +33,7 @@ const MAP: Record<string, StatusKey> = {
   in_transit: "inTransit",
   shipping: "shipping",
   delivered: "delivered",
+  completed: "completed",
   cancelled: "cancelled",
 };
 

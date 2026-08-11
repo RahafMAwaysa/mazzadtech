@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { ShieldCheck, Smartphone } from "lucide-react";
+import { ShieldCheck } from "lucide-react";
 import { AppShell, Page } from "@/components/AppShell";
 import { Button, Card, Field, Input, Spinner } from "@/components/ui-kit";
 import { useI18n } from "@/lib/i18n";
@@ -28,7 +28,6 @@ export const Route = createFileRoute("/auth")({
 
 const ROLES = ["customer", "supplier", "delivery"] as const;
 type SignupRole = (typeof ROLES)[number];
-
 const PENDING_SIGNUP_KEY = "mazzadtech_pending_signup";
 
 function routeForRoles(roles: string[]) {
@@ -39,6 +38,21 @@ function routeForRoles(roles: string[]) {
       : roles.includes("delivery")
         ? "/delivery"
         : "/";
+}
+
+function passwordStrength(password: string) {
+  if (!password) return { score: 0, label: "", color: "bg-muted" };
+  let score = 0;
+  if (password.length >= 8) score++;
+  if (password.length >= 12) score++;
+  if (/[a-z]/.test(password) && /[A-Z]/.test(password)) score++;
+  if (/\d/.test(password)) score++;
+  if (/[^A-Za-z0-9]/.test(password)) score++;
+
+  if (score <= 1) return { score: 1, label: "Weak", color: "bg-destructive" };
+  if (score === 2) return { score: 2, label: "Fair", color: "bg-orange-500" };
+  if (score === 3) return { score: 3, label: "Good", color: "bg-yellow-500" };
+  return { score: 4, label: "Strong", color: "bg-green-500" };
 }
 
 function AuthPage() {
@@ -53,15 +67,10 @@ function AuthPage() {
   const [phone, setPhone] = useState("");
   const [busy, setBusy] = useState(false);
   const [adminMode, setAdminMode] = useState(false);
-  const [authMethod, setAuthMethod] = useState<"password" | "phone">("password");
-  const [otpSent, setOtpSent] = useState(false);
-  const [otpCode, setOtpCode] = useState("");
 
   const needsCompany = role === "supplier" || role === "delivery";
+  const strength = passwordStrength(password);
 
-  // Handles the round trip back from Google/Apple: if the person picked a
-  // role/company before leaving, apply it now that we have a session, then
-  // route to the right dashboard. Runs once on mount.
   useEffect(() => {
     void (async () => {
       const { data } = await supabase.auth.getSession();
@@ -71,10 +80,14 @@ function AuthPage() {
       if (pendingRaw) {
         localStorage.removeItem(PENDING_SIGNUP_KEY);
         try {
-          const pending = JSON.parse(pendingRaw) as { role: string; company_name: string | null; phone: string | null };
+          const pending = JSON.parse(pendingRaw) as {
+            role: string;
+            company_name: string | null;
+            phone: string | null;
+          };
           await supabase.auth.updateUser({ data: pending });
         } catch {
-          // ignore malformed pending data
+          // Ignore malformed pending signup data.
         }
       }
 
@@ -82,73 +95,30 @@ function AuthPage() {
       try {
         roles = (await ensureAccount()).roles;
       } catch {
-        return; // not actually signed in yet / mid-OAuth flow
+        return;
       }
       navigate({ to: routeForRoles(roles) });
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const oauthSignIn = async (provider: "google" | "apple") => {
+  const googleSignIn = async () => {
     if (mode === "up") {
       localStorage.setItem(
         PENDING_SIGNUP_KEY,
-        JSON.stringify({ role, company_name: needsCompany ? company || null : null, phone: phone || null }),
+        JSON.stringify({
+          role,
+          company_name: needsCompany ? company || null : null,
+          phone: phone || null,
+        }),
       );
     }
+
     const { error } = await supabase.auth.signInWithOAuth({
-      provider,
+      provider: "google",
       options: { redirectTo: `${window.location.origin}/auth` },
     });
     if (error) toast.error(errorMessage(error));
-  };
-
-  const sendOtp = async () => {
-    if (!phone.trim()) {
-      toast.error(t("phoneRequired"));
-      return;
-    }
-    setBusy(true);
-    try {
-      const { error } = await supabase.auth.signInWithOtp(
-        mode === "up"
-          ? {
-              phone: phone.trim(),
-              options: { data: { full_name: fullName, role, company_name: needsCompany ? company : null, phone: phone.trim() } },
-            }
-          : { phone: phone.trim() },
-      );
-      if (error) throw error;
-      setOtpSent(true);
-      toast.success(t("otpSent"));
-    } catch (error) {
-      toast.error(errorMessage(error));
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const verifyOtp = async () => {
-    setBusy(true);
-    try {
-      const { error } = await supabase.auth.verifyOtp({
-        phone: phone.trim(),
-        token: otpCode.trim(),
-        type: "sms",
-      });
-      if (error) throw error;
-      let roles: string[] = [];
-      try {
-        roles = (await ensureAccount()).roles;
-      } catch {
-        roles = [];
-      }
-      navigate({ to: routeForRoles(roles) });
-    } catch (error) {
-      toast.error(errorMessage(error));
-    } finally {
-      setBusy(false);
-    }
   };
 
   const submit = async (e: React.FormEvent) => {
@@ -158,34 +128,27 @@ function AuthPage() {
       if (mode === "in") {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
-        // Backfills the profile/role records for accounts created before the
-        // role bootstrap existed, then routes by the role actually stored.
+
         let stored: string[] = [];
         try {
-          const res = await ensureAccount();
-          stored = res.roles;
+          stored = (await ensureAccount()).roles;
         } catch {
           stored = [];
         }
+
         if (adminMode && !stored.includes("admin")) {
           toast.error(t("notAnAdmin"));
         }
-        const target = stored.includes("admin")
-          ? "/admin"
-          : stored.includes("supplier")
-            ? "/supplier"
-            : stored.includes("delivery")
-              ? "/delivery"
-              : "/";
-        navigate({ to: target });
+        navigate({ to: routeForRoles(stored) });
       } else {
+        const signupName = needsCompany ? company : fullName;
         const { error } = await supabase.auth.signUp({
           email,
           password,
           options: {
             emailRedirectTo: window.location.origin,
             data: {
-              full_name: fullName,
+              full_name: signupName,
               role,
               company_name: needsCompany ? company : null,
               phone: phone || null,
@@ -221,12 +184,13 @@ function AuthPage() {
               </div>
             </div>
           )}
+
           <div className={`grid-cols-2 rounded-xl bg-muted p-1 text-sm ${adminMode ? "hidden" : "grid"}`}>
-            {(["in", "up"] as const).map((m) => (
+            {["in", "up"].map((m) => (
               <button
                 key={m}
                 type="button"
-                onClick={() => setMode(m)}
+                onClick={() => setMode(m as "in" | "up")}
                 className={`rounded-lg py-2 font-medium transition-colors ${
                   mode === m ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"
                 }`}
@@ -261,147 +225,77 @@ function AuthPage() {
                     ))}
                   </div>
                 </Field>
-                <Field label={t("fullName")}>
-                  <Input value={fullName} onChange={(e) => setFullName(e.target.value)} required />
+
+                <Field label={needsCompany ? (role === "delivery" ? t("deliveryCompanyName") : t("companyName")) : t("fullName")}>
+                  <Input
+                    value={needsCompany ? company : fullName}
+                    onChange={(e) => (needsCompany ? setCompany(e.target.value) : setFullName(e.target.value))}
+                    required
+                  />
                 </Field>
-                {needsCompany && (
-                  <Field label={role === "delivery" ? t("deliveryCompanyName") : t("companyName")}>
-                    <Input value={company} onChange={(e) => setCompany(e.target.value)} required />
-                  </Field>
-                )}
-                {authMethod === "password" && (
-                  <Field label={t("phone")}>
-                    <Input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} autoComplete="tel" />
-                  </Field>
-                )}
+
+                <Field label={t("phone")}>
+                  <Input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} autoComplete="tel" />
+                </Field>
               </>
             )}
 
             {!adminMode && (
               <>
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => void oauthSignIn("google")}
-                    className="flex h-11 items-center justify-center gap-2 rounded-xl border border-border bg-card text-sm font-medium"
-                  >
-                    <GoogleIcon />
-                    Google
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => void oauthSignIn("apple")}
-                    className="flex h-11 items-center justify-center gap-2 rounded-xl border border-border bg-card text-sm font-medium"
-                  >
-                    <AppleIcon />
-                    Apple
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => void googleSignIn()}
+                  className="flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-border bg-card text-sm font-medium"
+                >
+                  <GoogleIcon />
+                  Continue with Google
+                </button>
 
                 <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
                   <span className="h-px flex-1 bg-border" />
                   {t("orContinueWith")}
                   <span className="h-px flex-1 bg-border" />
                 </div>
+              </>
+            )}
 
-                <div className="grid grid-cols-2 gap-1 rounded-xl bg-muted p-1 text-xs">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setAuthMethod("password");
-                      setOtpSent(false);
-                    }}
-                    className={`rounded-lg py-1.5 font-medium transition-colors ${
-                      authMethod === "password" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"
-                    }`}
-                  >
-                    {t("email")}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setAuthMethod("phone")}
-                    className={`flex items-center justify-center gap-1.5 rounded-lg py-1.5 font-medium transition-colors ${
-                      authMethod === "phone" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"
-                    }`}
-                  >
-                    <Smartphone className="size-3.5" />
-                    {t("phone")}
-                  </button>
+            <Field label={t("email")}>
+              <Input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                autoComplete="email"
+              />
+            </Field>
+
+            <Field label={t("password")}>
+              <Input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                minLength={6}
+                autoComplete={mode === "in" ? "current-password" : "new-password"}
+              />
+              {mode === "up" && password && (
+                <div className="mt-2 space-y-1.5" aria-live="polite">
+                  <div className="flex gap-1">
+                    {[1, 2, 3, 4].map((segment) => (
+                      <div
+                        key={segment}
+                        className={`h-1.5 flex-1 rounded-full ${segment <= strength.score ? strength.color : "bg-muted"}`}
+                      />
+                    ))}
+                  </div>
+                  <p className="text-xs text-muted-foreground">{strength.label}</p>
                 </div>
-              </>
-            )}
+              )}
+            </Field>
 
-            {authMethod === "phone" && !adminMode ? (
-              <div className="space-y-3">
-                <Field label={t("phone")}>
-                  <Input
-                    type="tel"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    placeholder="+970 5X XXX XXXX"
-                    disabled={otpSent}
-                    autoComplete="tel"
-                  />
-                </Field>
-                {otpSent && (
-                  <Field label={t("otpCode")}>
-                    <Input
-                      inputMode="numeric"
-                      value={otpCode}
-                      onChange={(e) => setOtpCode(e.target.value)}
-                      placeholder="123456"
-                      autoFocus
-                    />
-                  </Field>
-                )}
-                <Button
-                  type="button"
-                  size="lg"
-                  className="w-full"
-                  disabled={busy}
-                  onClick={() => void (otpSent ? verifyOtp() : sendOtp())}
-                >
-                  {busy ? <Spinner /> : otpSent ? t("verifyCode") : t("sendCode")}
-                </Button>
-                {otpSent && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setOtpSent(false);
-                      setOtpCode("");
-                    }}
-                    className="mx-auto block text-xs text-muted-foreground underline"
-                  >
-                    {t("changePhoneNumber")}
-                  </button>
-                )}
-              </div>
-            ) : (
-              <>
-                <Field label={t("email")}>
-                  <Input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                    autoComplete="email"
-                  />
-                </Field>
-                <Field label={t("password")}>
-                  <Input
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    minLength={6}
-                    autoComplete={mode === "in" ? "current-password" : "new-password"}
-                  />
-                </Field>
-                <Button type="submit" size="lg" className="w-full" disabled={busy}>
-                  {busy ? <Spinner /> : mode === "in" ? t("signIn") : t("signUp")}
-                </Button>
-              </>
-            )}
+            <Button type="submit" size="lg" className="w-full" disabled={busy}>
+              {busy ? <Spinner /> : mode === "in" ? t("signIn") : t("signUp")}
+            </Button>
           </form>
         </Card>
 
@@ -410,7 +304,6 @@ function AuthPage() {
           onClick={() => {
             setAdminMode((v) => !v);
             setMode("in");
-            setAuthMethod("password");
           }}
           className="mx-auto mt-4 flex items-center gap-2 rounded-xl border border-border bg-card px-4 py-2 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
         >
@@ -426,17 +319,9 @@ function GoogleIcon() {
   return (
     <svg viewBox="0 0 24 24" className="size-4">
       <path fill="#4285F4" d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.5h6.4c-.3 1.5-1.2 2.7-2.5 3.6v3h4.3c2.5-2.3 3.3-5.6 3.3-8.8z" />
-      <path fill="#34A853" d="M12 24c3.2 0 5.9-1.1 7.9-2.9l-4.3-3c-1.1.8-2.6 1.3-4.3 1.3-3.3 0-6.1-2.2-7.1-5.2H.4v3.1C2.4 21.5 6.9 24 12 24z" />
+      <path fill="#34A853" d="M12 24c3.2 0 5.9-1.1 7.9-2.9l-4.3-3c-1.1.8-2.6 1.3-4.3 1.3-3.3 0-6.1-2.2-7.1-5.2H.4v3.1C-.1 8 -.4 9.9-.4 11.8s.3 3.8.8 5.5l4.5-3.1z" />
       <path fill="#FBBC05" d="M4.9 14.2c-.3-.8-.4-1.6-.4-2.4s.1-1.6.4-2.4V6.3H.4C-.1 8 -.4 9.9-.4 11.8s.3 3.8.8 5.5l4.5-3.1z" />
       <path fill="#EA4335" d="M12 4.8c1.8 0 3.4.6 4.7 1.8l3.6-3.6C18.1 1.1 15.3 0 12 0 6.9 0 2.4 2.5.4 6.3l4.5 3.1c1-3 3.8-4.6 7.1-4.6z" />
-    </svg>
-  );
-}
-
-function AppleIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="size-4 fill-current">
-      <path d="M16.7 1c.1 1.2-.4 2.4-1.1 3.3-.8.9-2 1.6-3.2 1.5-.1-1.1.4-2.3 1.1-3.1C14.3 1.7 15.5 1 16.7 1zM20.9 17.2c-.5 1.2-1.1 2.3-1.9 3.4-1.1 1.5-2.3 3.4-4 3.4-1.4 0-1.9-.9-3.5-.9-1.6 0-2.2.9-3.5.9-1.7.1-3-1.9-4.1-3.4-2.3-3.2-4-9-1.7-13 1.1-2 3.1-3.2 5.2-3.3 1.4 0 2.6.9 3.5.9.8 0 2.3-1.1 4-.9.7 0 3.1.3 4.6 2.5-.1.1-2.8 1.6-2.8 4.9.1 3.9 3.4 5.2 3.2 5.5z" />
     </svg>
   );
 }

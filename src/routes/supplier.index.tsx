@@ -46,6 +46,8 @@ function Welcome({ userId }: { userId: string }) {
     );
   }
 
+  const rating = Number(data?.rating ?? 0);
+
   return (
     <Page>
       <div className="hero-gradient rounded-3xl p-5 text-primary-foreground">
@@ -68,7 +70,7 @@ function Welcome({ userId }: { userId: string }) {
         </div>
 
         <div className="grid grid-cols-3 gap-2 text-center">
-          <Stat label={t("rating")} value={Number(data?.rating ?? 4.5).toFixed(1)} icon={<Star className="size-3.5" />} />
+          <Stat label={t("rating")} value={rating > 0 ? rating.toFixed(1) : "—"} icon={<Star className="size-3.5" />} />
           <Stat label={t("completedOrders")} value={String(data?.completed_orders ?? 0)} icon={<Package className="size-3.5" />} />
           <Stat label={t("responseRate")} value={`${data?.response_rate ?? 95}%`} />
         </div>
