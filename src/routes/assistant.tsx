@@ -6,7 +6,7 @@ import { Send, Sparkles, Pencil, Check, Bot, User2 } from "lucide-react";
 import { toast } from "sonner";
 import { Guard } from "@/components/Guard";
 import { Page } from "@/components/AppShell";
-import { Button, Card, Field, Input, Spinner, Textarea } from "@/components/ui-kit";
+import { Badge, Button, Card, Field, Input, Spinner, Textarea } from "@/components/ui-kit";
 import { CATEGORIES, categoryLabel, useI18n } from "@/lib/i18n";
 import { supabase } from "@/integrations/supabase/client";
 import { extractRequest, type ExtractedRequest } from "@/lib/requests.functions";
@@ -51,6 +51,7 @@ function Assistant({ userId }: { userId: string }) {
   const [saving, setSaving] = useState(false);
   const [brandOptions, setBrandOptions] = useState<string[]>([]);
   const [brandOther, setBrandOther] = useState("");
+  const [purposeOther, setPurposeOther] = useState("");
   const endRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -135,6 +136,10 @@ function Assistant({ userId }: { userId: string }) {
         ? [...draft.brands, customBrand]
         : draft.brands;
       const purposes = draft.purposes.length ? draft.purposes : draft.purpose ? [draft.purpose] : [];
+      const customPurpose = purposeOther.trim();
+      const finalPurposes = customPurpose && !purposes.includes(customPurpose)
+        ? [...purposes, customPurpose]
+        : purposes;
 
       if (customBrand) {
         const db = supabase as any;
@@ -151,8 +156,8 @@ function Assistant({ userId }: { userId: string }) {
           budget_min: draft.budget_min,
           budget_max: draft.budget_max,
           specs: draft.specs,
-          purpose: purposes.join(", "),
-          purposes,
+          purpose: finalPurposes.join(", "),
+          purposes: finalPurposes,
           brands,
           warranty_preference: draft.warranty_preference,
           delivery_preference: draft.delivery_preference,
@@ -210,47 +215,53 @@ function Assistant({ userId }: { userId: string }) {
           </Field>
 
           <Field label={t("purpose")}>
-            <div className="flex flex-wrap gap-2">
-              {PURPOSES.map((purpose) => {
-                const selected = draft.purposes.includes(purpose);
-                return (
-                  <button key={purpose} type="button" onClick={() => togglePurpose(purpose)} className={`rounded-full border px-3 py-1.5 text-xs font-medium ${selected ? "border-primary bg-primary-soft text-primary" : "border-border bg-card text-muted-foreground"}`}>
-                    {purpose}
-                  </button>
-                );
-              })}
-              <button type="button" onClick={() => togglePurpose("Other")} className={`rounded-full border px-3 py-1.5 text-xs font-medium ${draft.purposes.includes("Other") ? "border-primary bg-primary-soft text-primary" : "border-border bg-card text-muted-foreground"}`}>
-                Other
-              </button>
-            </div>
+            <details className="group relative">
+              <summary className="flex h-11 cursor-pointer list-none items-center justify-between rounded-xl border border-input bg-card px-3 text-sm [&::-webkit-details-marker]:hidden">
+                <span>{draft.purposes.length ? `${draft.purposes.length} selected` : "Select purposes"}</span>
+                <span className="text-muted-foreground transition-transform group-open:rotate-180">⌄</span>
+              </summary>
+              <div className="absolute z-20 mt-2 max-h-72 w-full overflow-auto rounded-xl border border-border bg-card p-2 shadow-lg">
+                {PURPOSES.map((purpose) => (
+                  <label key={purpose} className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-2 text-xs hover:bg-muted">
+                    <input type="checkbox" checked={draft.purposes.includes(purpose)} onChange={() => togglePurpose(purpose)} />
+                    <span>{purpose}</span>
+                  </label>
+                ))}
+                <label className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-2 text-xs hover:bg-muted">
+                  <input type="checkbox" checked={draft.purposes.includes("Other")} onChange={() => togglePurpose("Other")} />
+                  <span>Other</span>
+                </label>
+              </div>
+            </details>
+            {draft.purposes.length > 0 && <p className="text-[11px] text-muted-foreground">Selected: {draft.purposes.join(", ")}</p>}
             {draft.purposes.includes("Other") && (
-              <Input
-                className="mt-2"
-                placeholder="Write your purpose"
-                value={draft.purposes.find((p) => p !== "Other" && !PURPOSES.includes(p as (typeof PURPOSES)[number])) ?? ""}
-                onChange={(e) => setDraft({ ...draft, purposes: [...draft.purposes.filter((p) => p === "Other" || PURPOSES.includes(p as (typeof PURPOSES)[number])), e.target.value].filter(Boolean) })}
-              />
+              <Input className="mt-2" placeholder="Write your purpose" value={purposeOther} onChange={(e) => setPurposeOther(e.target.value)} />
             )}
           </Field>
 
           <Field label={t("brands")}>
-            <div className="flex flex-wrap gap-2">
-              {brandOptions.map((brand) => {
-                const selected = draft.brands.includes(brand);
-                return (
-                  <button key={brand} type="button" onClick={() => toggleBrand(brand)} className={`rounded-full border px-3 py-1.5 text-xs font-medium ${selected ? "border-primary bg-primary-soft text-primary" : "border-border bg-card text-muted-foreground"}`}>
-                    {brand}
-                  </button>
-                );
-              })}
-              <button type="button" onClick={() => setBrandOther(brandOther ? "" : " ")} className={`rounded-full border px-3 py-1.5 text-xs font-medium ${brandOther ? "border-primary bg-primary-soft text-primary" : "border-border bg-card text-muted-foreground"}`}>
-                Other
-              </button>
-            </div>
+            <details className="group relative">
+              <summary className="flex h-11 cursor-pointer list-none items-center justify-between rounded-xl border border-input bg-card px-3 text-sm [&::-webkit-details-marker]:hidden">
+                <span>{draft.brands.length ? `${draft.brands.length} selected` : "Select preferred brands"}</span>
+                <span className="text-muted-foreground transition-transform group-open:rotate-180">⌄</span>
+              </summary>
+              <div className="absolute z-20 mt-2 max-h-72 w-full overflow-auto rounded-xl border border-border bg-card p-2 shadow-lg">
+                {brandOptions.map((brand) => (
+                  <label key={brand} className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-2 text-xs hover:bg-muted">
+                    <input type="checkbox" checked={draft.brands.includes(brand)} onChange={() => toggleBrand(brand)} />
+                    <span>{brand}</span>
+                  </label>
+                ))}
+                <label className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-2 text-xs hover:bg-muted">
+                  <input type="checkbox" checked={brandOther !== ""} onChange={() => setBrandOther(brandOther ? "" : " ")} />
+                  <span>Other</span>
+                </label>
+              </div>
+            </details>
+            {draft.brands.length > 0 && <p className="text-[11px] text-muted-foreground">Selected: {draft.brands.join(", ")}</p>}
             {brandOther !== "" && (
               <Input className="mt-2" placeholder="Write another brand" value={brandOther.trim()} onChange={(e) => setBrandOther(e.target.value)} />
             )}
-            {draft.brands.length > 0 && <p className="text-[11px] text-muted-foreground">Selected: {draft.brands.join(", ")}</p>}
           </Field>
 
           <div className="grid grid-cols-2 gap-3">
@@ -259,7 +270,7 @@ function Assistant({ userId }: { userId: string }) {
             </Field>
             <Field label={t("delivery")}>
               <select value={draft.delivery_preference ?? ""} onChange={(e) => setDraft({ ...draft, delivery_preference: e.target.value })} className="h-11 w-full rounded-xl border border-input bg-card px-3 text-sm">
-                <option value="">Select</option>
+                <option value="">Select delivery preference</option>
                 {DELIVERY_OPTIONS.map((option) => <option key={option} value={option}>{option}</option>)}
               </select>
             </Field>
