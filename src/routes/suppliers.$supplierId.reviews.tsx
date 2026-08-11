@@ -43,7 +43,7 @@ function SupplierReviews() {
       const [{ data: supplier, error: supplierError }, { data: reviews, error: reviewsError }] = await Promise.all([
         supabase
           .from("supplier_profiles")
-          .select("user_id, alias, company_name, rating, verified")
+          .select("user_id, rating, verified")
           .eq("user_id", supplierId)
           .maybeSingle(),
         (supabase as any).rpc("get_supplier_reviews", { _supplier_id: supplierId }),
@@ -70,10 +70,10 @@ function SupplierReviews() {
   return (
     <Page title="Supplier reviews">
       <Card className="space-y-3">
-        <div className="flex items-start justify-between gap-3">
+        <div className="flex items-center justify-between gap-3">
           <div>
-            <p className="font-display text-lg font-semibold">{data.supplier.company_name}</p>
-            <p className="text-xs text-muted-foreground">{data.supplier.alias}</p>
+            <p className="font-display text-lg font-semibold">Supplier rating</p>
+            <p className="text-xs text-muted-foreground">Verified customer reviews</p>
           </div>
           {data.supplier.verified && <Badge tone="success">Verified</Badge>}
         </div>
