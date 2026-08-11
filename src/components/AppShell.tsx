@@ -66,9 +66,7 @@ export function AppShell({
     <div className="mx-auto flex min-h-screen w-full max-w-lg flex-col bg-background">
       <header className="sticky top-0 z-20 flex items-center justify-between border-b border-border bg-background/85 px-4 py-3 backdrop-blur">
         <Link to="/" className="flex items-center gap-2">
-          <span className="grid size-8 place-items-center rounded-xl hero-gradient text-sm font-bold text-primary-foreground">
-            M
-          </span>
+          <img src="/branding/logo.png" alt={t("appName")} className="size-8 object-contain" />
           <span className="font-display text-base font-semibold">{t("appName")}</span>
         </Link>
         <div className="flex items-center gap-1">
