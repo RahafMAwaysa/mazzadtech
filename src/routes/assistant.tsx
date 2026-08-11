@@ -24,6 +24,8 @@ const PURPOSES = [
 ] as const;
 
 const DELIVERY_OPTIONS = ["Deliver", "Hand-to-hand receipt"] as const;
+const BUDGET_SLIDER_MAX = 50000;
+const BUDGET_STEP = 50;
 
 type RequestDraft = ExtractedRequest & { purposes: string[] };
 
@@ -31,10 +33,7 @@ export const Route = createFileRoute("/assistant")({
   head: () => ({
     meta: [
       { title: "AI shopping assistant — Ateeq" },
-      {
-        name: "description",
-        content: "Describe the electronics you need in plain words and the assistant turns it into a supplier request.",
-      },
+      { name: "description", content: "Describe the electronics you need in plain words and the assistant turns it into a supplier request." },
       { property: "og:title", content: "AI shopping assistant — Ateeq" },
       { property: "og:description", content: "Chat naturally and get competing offers from verified suppliers." },
     ],
@@ -62,13 +61,8 @@ function Assistant({ userId }: { userId: string }) {
 
   const busy = status === "submitted" || status === "streaming";
 
-  useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, busy, draft]);
-
-  useEffect(() => {
-    if (!busy && !draft) inputRef.current?.focus();
-  }, [busy, draft]);
+  useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages, busy, draft]);
+  useEffect(() => { if (!busy && !draft) inputRef.current?.focus(); }, [busy, draft]);
 
   useEffect(() => {
     if (!draft) return;
@@ -80,8 +74,7 @@ function Assistant({ userId }: { userId: string }) {
     void loadBrands();
   }, [draft]);
 
-  const textOf = (m: (typeof messages)[number]) =>
-    m.parts.map((p) => (p.type === "text" ? p.text : "")).join("");
+  const textOf = (m: (typeof messages)[number]) => m.parts.map((p) => (p.type === "text" ? p.text : "")).join("");
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -95,9 +88,7 @@ function Assistant({ userId }: { userId: string }) {
     if (messages.length === 0) return;
     setReviewing(true);
     try {
-      const transcript = messages
-        .map((m) => `${m.role === "user" ? "Customer" : "Assistant"}: ${textOf(m)}`)
-        .join("\n");
+      const transcript = messages.map((m) => `${m.role === "user" ? "Customer" : "Assistant"}: ${textOf(m)}`).join("\n");
       const result = await extractRequest({ data: { transcript, lang } });
       setDraft({ ...result, purposes: result.purpose ? [result.purpose] : [] });
     } catch (error) {
@@ -109,22 +100,12 @@ function Assistant({ userId }: { userId: string }) {
 
   const toggleBrand = (brand: string) => {
     if (!draft) return;
-    setDraft({
-      ...draft,
-      brands: draft.brands.includes(brand)
-        ? draft.brands.filter((b) => b !== brand)
-        : [...draft.brands, brand],
-    });
+    setDraft({ ...draft, brands: draft.brands.includes(brand) ? draft.brands.filter((b) => b !== brand) : [...draft.brands, brand] });
   };
 
   const togglePurpose = (purpose: string) => {
     if (!draft) return;
-    setDraft({
-      ...draft,
-      purposes: draft.purposes.includes(purpose)
-        ? draft.purposes.filter((p) => p !== purpose)
-        : [...draft.purposes, purpose],
-    });
+    setDraft({ ...draft, purposes: draft.purposes.includes(purpose) ? draft.purposes.filter((p) => p !== purpose) : [...draft.purposes, purpose] });
   };
 
   const confirm = async () => {
@@ -132,14 +113,10 @@ function Assistant({ userId }: { userId: string }) {
     setSaving(true);
     try {
       const customBrand = brandOther.trim();
-      const brands = customBrand && !draft.brands.includes(customBrand)
-        ? [...draft.brands, customBrand]
-        : draft.brands;
+      const brands = customBrand && !draft.brands.includes(customBrand) ? [...draft.brands, customBrand] : draft.brands;
       const purposes = draft.purposes.length ? draft.purposes : draft.purpose ? [draft.purpose] : [];
       const customPurpose = purposeOther.trim();
-      const finalPurposes = customPurpose && !purposes.includes(customPurpose)
-        ? [...purposes, customPurpose]
-        : purposes;
+      const finalPurposes = customPurpose && !purposes.includes(customPurpose) ? [...purposes, customPurpose] : purposes;
 
       if (customBrand) {
         const db = supabase as any;
@@ -147,25 +124,21 @@ function Assistant({ userId }: { userId: string }) {
         if (brandError && !String(brandError.message).toLowerCase().includes("duplicate")) throw brandError;
       }
 
-      const { data, error } = await (supabase as any)
-        .from("purchase_requests")
-        .insert({
-          customer_id: userId,
-          title: draft.title,
-          category: draft.category,
-          budget_min: draft.budget_min,
-          budget_max: draft.budget_max,
-          specs: draft.specs,
-          purpose: finalPurposes.join(", "),
-          purposes: finalPurposes,
-          brands,
-          warranty_preference: draft.warranty_preference,
-          delivery_preference: draft.delivery_preference,
-          notes: draft.notes,
-          status: "open",
-        })
-        .select("id")
-        .single();
+      const { data, error } = await (supabase as any).from("purchase_requests").insert({
+        customer_id: userId,
+        title: draft.title,
+        category: draft.category,
+        budget_min: draft.budget_min,
+        budget_max: draft.budget_max,
+        specs: draft.specs,
+        purpose: finalPurposes.join(", "),
+        purposes: finalPurposes,
+        brands,
+        warranty_preference: draft.warranty_preference,
+        delivery_preference: draft.delivery_preference,
+        notes: draft.notes,
+        status: "open",
+      }).select("id").single();
       if (error) throw error;
 
       const { error: convError } = await supabase.from("conversations").insert({
@@ -185,111 +158,69 @@ function Assistant({ userId }: { userId: string }) {
   };
 
   if (draft) {
+    const rawMin = Number(draft.budget_min ?? 0);
+    const rawMax = Number(draft.budget_max ?? BUDGET_SLIDER_MAX);
+    const sliderMax = Math.max(BUDGET_SLIDER_MAX, rawMax, rawMin + BUDGET_STEP);
+    const budgetMin = Math.min(Math.max(rawMin, 0), sliderMax - BUDGET_STEP);
+    const budgetMax = Math.min(Math.max(rawMax, budgetMin + BUDGET_STEP), sliderMax);
+
     return (
       <Page title={t("summaryTitle")}>
         <Card className="space-y-3">
           <Field label={t("category")}>
-            <select
-              value={draft.category}
-              onChange={(e) => setDraft({ ...draft, category: e.target.value })}
-              className="h-11 w-full rounded-xl border border-input bg-card px-3 text-sm"
-            >
-              {CATEGORIES.map((c) => (
-                <option key={c} value={c}>{categoryLabel[c]?.[lang]}</option>
-              ))}
+            <select value={draft.category} onChange={(e) => setDraft({ ...draft, category: e.target.value })} className="h-11 w-full rounded-xl border border-input bg-card px-3 text-sm">
+              {CATEGORIES.map((c) => <option key={c} value={c}>{categoryLabel[c]?.[lang]}</option>)}
             </select>
           </Field>
-          <Field label={t("newRequest")}>
-            <Input value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} />
+          <Field label={t("newRequest")}><Input value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} /></Field>
+
+          <Field label={t("budget")}>
+            <div className="space-y-4 rounded-xl border border-input bg-card px-3 py-4">
+              <div>
+                <div className="mb-1 flex justify-between text-xs"><span className="text-muted-foreground">Minimum</span><span className="font-semibold">{budgetMin.toLocaleString()} {t("currency")}</span></div>
+                <input type="range" min={0} max={sliderMax - BUDGET_STEP} step={BUDGET_STEP} value={budgetMin} onChange={(e) => { const next = Number(e.target.value); setDraft({ ...draft, budget_min: next, budget_max: Math.max(budgetMax, next + BUDGET_STEP) }); }} className="w-full accent-primary" />
+              </div>
+              <div>
+                <div className="mb-1 flex justify-between text-xs"><span className="text-muted-foreground">Maximum</span><span className="font-semibold">{budgetMax.toLocaleString()} {t("currency")}</span></div>
+                <input type="range" min={budgetMin + BUDGET_STEP} max={sliderMax} step={BUDGET_STEP} value={budgetMax} onChange={(e) => setDraft({ ...draft, budget_max: Number(e.target.value) })} className="w-full accent-primary" />
+              </div>
+              <div className="flex justify-between text-[10px] text-muted-foreground"><span>0</span><span>{sliderMax.toLocaleString()} {t("currency")}</span></div>
+            </div>
           </Field>
-          <div className="grid grid-cols-2 gap-3">
-            <Field label={`${t("budget")} (min)`}>
-              <Input type="number" value={draft.budget_min ?? ""} onChange={(e) => setDraft({ ...draft, budget_min: e.target.value ? Number(e.target.value) : null })} />
-            </Field>
-            <Field label={`${t("budget")} (max)`}>
-              <Input type="number" value={draft.budget_max ?? ""} onChange={(e) => setDraft({ ...draft, budget_max: e.target.value ? Number(e.target.value) : null })} />
-            </Field>
-          </div>
-          <Field label={t("specs")}>
-            <Textarea rows={4} value={draft.specs.join("\n")} onChange={(e) => setDraft({ ...draft, specs: e.target.value.split("\n").filter(Boolean) })} />
-          </Field>
+
+          <Field label={t("specs")}><Textarea rows={4} value={draft.specs.join("\n")} onChange={(e) => setDraft({ ...draft, specs: e.target.value.split("\n").filter(Boolean) })} /></Field>
 
           <Field label={t("purpose")}>
             <details className="group relative">
-              <summary className="flex h-11 cursor-pointer list-none items-center justify-between rounded-xl border border-input bg-card px-3 text-sm [&::-webkit-details-marker]:hidden">
-                <span>{draft.purposes.length ? `${draft.purposes.length} selected` : "Select purposes"}</span>
-                <span className="text-muted-foreground transition-transform group-open:rotate-180">⌄</span>
-              </summary>
+              <summary className="flex h-11 cursor-pointer list-none items-center justify-between rounded-xl border border-input bg-card px-3 text-sm [&::-webkit-details-marker]:hidden"><span>{draft.purposes.length ? `${draft.purposes.length} selected` : "Select purposes"}</span><span className="text-muted-foreground transition-transform group-open:rotate-180">⌄</span></summary>
               <div className="absolute z-20 mt-2 max-h-72 w-full overflow-auto rounded-xl border border-border bg-card p-2 shadow-lg">
-                {PURPOSES.map((purpose) => (
-                  <label key={purpose} className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-2 text-xs hover:bg-muted">
-                    <input type="checkbox" checked={draft.purposes.includes(purpose)} onChange={() => togglePurpose(purpose)} />
-                    <span>{purpose}</span>
-                  </label>
-                ))}
-                <label className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-2 text-xs hover:bg-muted">
-                  <input type="checkbox" checked={draft.purposes.includes("Other")} onChange={() => togglePurpose("Other")} />
-                  <span>Other</span>
-                </label>
+                {PURPOSES.map((purpose) => <label key={purpose} className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-2 text-xs hover:bg-muted"><input type="checkbox" checked={draft.purposes.includes(purpose)} onChange={() => togglePurpose(purpose)} /><span>{purpose}</span></label>)}
+                <label className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-2 text-xs hover:bg-muted"><input type="checkbox" checked={draft.purposes.includes("Other")} onChange={() => togglePurpose("Other")} /><span>Other</span></label>
               </div>
             </details>
             {draft.purposes.length > 0 && <p className="text-[11px] text-muted-foreground">Selected: {draft.purposes.join(", ")}</p>}
-            {draft.purposes.includes("Other") && (
-              <Input className="mt-2" placeholder="Write your purpose" value={purposeOther} onChange={(e) => setPurposeOther(e.target.value)} />
-            )}
+            {draft.purposes.includes("Other") && <Input className="mt-2" placeholder="Write your purpose" value={purposeOther} onChange={(e) => setPurposeOther(e.target.value)} />}
           </Field>
 
           <Field label={t("brands")}>
             <details className="group relative">
-              <summary className="flex h-11 cursor-pointer list-none items-center justify-between rounded-xl border border-input bg-card px-3 text-sm [&::-webkit-details-marker]:hidden">
-                <span>{draft.brands.length ? `${draft.brands.length} selected` : "Select preferred brands"}</span>
-                <span className="text-muted-foreground transition-transform group-open:rotate-180">⌄</span>
-              </summary>
+              <summary className="flex h-11 cursor-pointer list-none items-center justify-between rounded-xl border border-input bg-card px-3 text-sm [&::-webkit-details-marker]:hidden"><span>{draft.brands.length ? `${draft.brands.length} selected` : "Select preferred brands"}</span><span className="text-muted-foreground transition-transform group-open:rotate-180">⌄</span></summary>
               <div className="absolute z-20 mt-2 max-h-72 w-full overflow-auto rounded-xl border border-border bg-card p-2 shadow-lg">
-                {brandOptions.map((brand) => (
-                  <label key={brand} className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-2 text-xs hover:bg-muted">
-                    <input type="checkbox" checked={draft.brands.includes(brand)} onChange={() => toggleBrand(brand)} />
-                    <span>{brand}</span>
-                  </label>
-                ))}
-                <label className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-2 text-xs hover:bg-muted">
-                  <input type="checkbox" checked={brandOther !== ""} onChange={() => setBrandOther(brandOther ? "" : " ")} />
-                  <span>Other</span>
-                </label>
+                {brandOptions.map((brand) => <label key={brand} className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-2 text-xs hover:bg-muted"><input type="checkbox" checked={draft.brands.includes(brand)} onChange={() => toggleBrand(brand)} /><span>{brand}</span></label>)}
+                <label className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-2 text-xs hover:bg-muted"><input type="checkbox" checked={brandOther !== ""} onChange={() => setBrandOther(brandOther ? "" : " ")} /><span>Other</span></label>
               </div>
             </details>
             {draft.brands.length > 0 && <p className="text-[11px] text-muted-foreground">Selected: {draft.brands.join(", ")}</p>}
-            {brandOther !== "" && (
-              <Input className="mt-2" placeholder="Write another brand" value={brandOther.trim()} onChange={(e) => setBrandOther(e.target.value)} />
-            )}
+            {brandOther !== "" && <Input className="mt-2" placeholder="Write another brand" value={brandOther.trim()} onChange={(e) => setBrandOther(e.target.value)} />}
           </Field>
 
           <div className="grid grid-cols-2 gap-3">
-            <Field label={t("warranty")}>
-              <Input value={draft.warranty_preference ?? ""} onChange={(e) => setDraft({ ...draft, warranty_preference: e.target.value })} />
-            </Field>
-            <Field label={t("delivery")}>
-              <select value={draft.delivery_preference ?? ""} onChange={(e) => setDraft({ ...draft, delivery_preference: e.target.value })} className="h-11 w-full rounded-xl border border-input bg-card px-3 text-sm">
-                <option value="">Select delivery preference</option>
-                {DELIVERY_OPTIONS.map((option) => <option key={option} value={option}>{option}</option>)}
-              </select>
-            </Field>
+            <Field label={t("warranty")}><Input value={draft.warranty_preference ?? ""} onChange={(e) => setDraft({ ...draft, warranty_preference: e.target.value })} /></Field>
+            <Field label={t("delivery")}><select value={draft.delivery_preference ?? ""} onChange={(e) => setDraft({ ...draft, delivery_preference: e.target.value })} className="h-11 w-full rounded-xl border border-input bg-card px-3 text-sm"><option value="">Select delivery preference</option>{DELIVERY_OPTIONS.map((option) => <option key={option} value={option}>{option}</option>)}</select></Field>
           </div>
-          <Field label={t("notes")}>
-            <Textarea rows={2} value={draft.notes ?? ""} onChange={(e) => setDraft({ ...draft, notes: e.target.value })} />
-          </Field>
+          <Field label={t("notes")}><Textarea rows={2} value={draft.notes ?? ""} onChange={(e) => setDraft({ ...draft, notes: e.target.value })} /></Field>
         </Card>
-
-        <div className="flex gap-3">
-          <Button variant="outline" className="flex-1" onClick={() => setDraft(null)}>
-            <Pencil className="size-4" />
-            {t("edit")}
-          </Button>
-          <Button className="flex-1" onClick={confirm} disabled={saving}>
-            {saving ? <Spinner /> : <Check className="size-4" />}
-            {t("confirm")}
-          </Button>
-        </div>
+        <div className="flex gap-3"><Button variant="outline" className="flex-1" onClick={() => setDraft(null)}><Pencil className="size-4" />{t("edit")}</Button><Button className="flex-1" onClick={confirm} disabled={saving}>{saving ? <Spinner /> : <Check className="size-4" />}{t("confirm")}</Button></div>
       </Page>
     );
   }
@@ -297,26 +228,14 @@ function Assistant({ userId }: { userId: string }) {
   return (
     <div className="flex min-h-[calc(100vh-9rem)] flex-col">
       <div className="flex-1 space-y-4 px-4 py-5">
-        <div className="flex items-start gap-2">
-          <span className="grid size-8 shrink-0 place-items-center rounded-xl bg-primary-soft text-primary"><Bot className="size-4" /></span>
-          <p className="max-w-[85%] text-sm leading-relaxed">{t("assistantIntro")}</p>
-        </div>
-        {messages.map((m) => (
-          <div key={m.id} className={m.role === "user" ? "flex justify-end" : "flex items-start gap-2"}>
-            {m.role !== "user" && <span className="grid size-8 shrink-0 place-items-center rounded-xl bg-primary-soft text-primary"><Bot className="size-4" /></span>}
-            <div className={m.role === "user" ? "max-w-[85%] rounded-2xl bg-primary px-3.5 py-2.5 text-sm text-primary-foreground" : "max-w-[85%] whitespace-pre-wrap text-sm leading-relaxed text-foreground"}>{textOf(m)}</div>
-            {m.role === "user" && <span className="ms-2 grid size-8 shrink-0 place-items-center rounded-xl bg-muted text-muted-foreground"><User2 className="size-4" /></span>}
-          </div>
-        ))}
+        <div className="flex items-start gap-2"><span className="grid size-8 shrink-0 place-items-center rounded-xl bg-primary-soft text-primary"><Bot className="size-4" /></span><p className="max-w-[85%] text-sm leading-relaxed">{t("assistantIntro")}</p></div>
+        {messages.map((m) => <div key={m.id} className={m.role === "user" ? "flex justify-end" : "flex items-start gap-2"}>{m.role !== "user" && <span className="grid size-8 shrink-0 place-items-center rounded-xl bg-primary-soft text-primary"><Bot className="size-4" /></span>}<div className={m.role === "user" ? "max-w-[85%] rounded-2xl bg-primary px-3.5 py-2.5 text-sm text-primary-foreground" : "max-w-[85%] whitespace-pre-wrap text-sm leading-relaxed text-foreground"}>{textOf(m)}</div>{m.role === "user" && <span className="ms-2 grid size-8 shrink-0 place-items-center rounded-xl bg-muted text-muted-foreground"><User2 className="size-4" /></span>}</div>)}
         {busy && <div className="flex items-center gap-2 text-sm text-muted-foreground"><Bot className="size-4 animate-pulse" />{t("thinking")}</div>}
         <div ref={endRef} />
       </div>
       <div className="sticky bottom-20 space-y-3 bg-background/90 px-4 py-3 backdrop-blur">
         {messages.length >= 2 && <Button variant="outline" className="w-full" onClick={review} disabled={reviewing}>{reviewing ? <Spinner /> : <Sparkles className="size-4" />}{t("summarize")}</Button>}
-        <form onSubmit={submit} className="flex items-center gap-2">
-          <Input ref={inputRef} value={input} onChange={(e) => setInput(e.target.value)} placeholder={t("heroTitle")} />
-          <Button type="submit" size="icon" disabled={busy || !input.trim()} aria-label={t("send")}><Send className="size-4" /></Button>
-        </form>
+        <form onSubmit={submit} className="flex items-center gap-2"><Input ref={inputRef} value={input} onChange={(e) => setInput(e.target.value)} placeholder={t("heroTitle")} /><Button type="submit" size="icon" disabled={busy || !input.trim()} aria-label={t("send")}><Send className="size-4" /></Button></form>
       </div>
     </div>
   );
