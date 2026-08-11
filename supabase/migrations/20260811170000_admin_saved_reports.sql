@@ -3,6 +3,7 @@
 -- their own persistent report ownership field.
 
 ALTER TABLE public.reports
+  ALTER COLUMN supplier_id DROP NOT NULL,
   ADD COLUMN IF NOT EXISTS admin_id uuid REFERENCES auth.users(id) ON DELETE CASCADE;
 
 CREATE INDEX IF NOT EXISTS reports_admin_id_idx ON public.reports(admin_id);
