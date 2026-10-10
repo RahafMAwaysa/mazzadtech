@@ -113,7 +113,10 @@ function Checkout({ userId }: { userId: string }) {
   const { data: rates } = useQuery({
     queryKey: ["commission_rates"],
     queryFn: async () => {
-      const { data: rows, error } = await supabase.rpc("get_commission_rates");
+      type Rates = { supplier_pct: number; customer_pct: number; delivery_pct: number };
+      const { data: rows, error } = await (
+        supabase.rpc as unknown as (fn: string) => Promise<{ data: Rates[] | null; error: Error | null }>
+      )("get_commission_rates");
       if (error) throw error;
       return rows?.[0] ?? { supplier_pct: 5, customer_pct: 2, delivery_pct: 5 };
     },
