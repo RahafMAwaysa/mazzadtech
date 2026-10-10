@@ -214,6 +214,44 @@ export type Database = {
         }
         Relationships: []
       }
+      delivery_tracking: {
+        Row: {
+          accuracy: number | null
+          eta_at: string | null
+          lat: number | null
+          lng: number | null
+          order_id: string
+          sharing: boolean
+          updated_at: string
+        }
+        Insert: {
+          accuracy?: number | null
+          eta_at?: string | null
+          lat?: number | null
+          lng?: number | null
+          order_id: string
+          sharing?: boolean
+          updated_at?: string
+        }
+        Update: {
+          accuracy?: number | null
+          eta_at?: string | null
+          lat?: number | null
+          lng?: number | null
+          order_id?: string
+          sharing?: boolean
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "delivery_tracking_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: true
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       disputes: {
         Row: {
           category: string
