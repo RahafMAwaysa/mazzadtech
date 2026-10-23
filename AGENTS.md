@@ -8,3 +8,6 @@
 > Commits you push to the connected branch sync back to Lovable and show up in
 > the editor, so keep the branch in a working state.
 <!-- LOVABLE:END -->
+
+## Rules
+- vite.config.ts defines public VITE_SUPABASE_* fallbacks: `.env` is untracked, so the publish build would otherwise ship without the backend connection (blank live site).
