@@ -13,12 +13,12 @@ import { errorMessage } from "@/lib/utils";
 export const Route = createFileRoute("/profile")({
   head: () => ({
     meta: [
-      { title: "My profile — MazzadTech" },
+      { title: "My profile — zaddaM" },
       {
         name: "description",
         content: "View and edit your account information, saved delivery locations and payment methods.",
       },
-      { property: "og:title", content: "My profile — MazzadTech" },
+      { property: "og:title", content: "My profile — zaddaM" },
       {
         property: "og:description",
         content: "View and edit your account information, saved delivery locations and payment methods.",

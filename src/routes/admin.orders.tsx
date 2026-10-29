@@ -8,7 +8,7 @@ import { useI18n } from "@/lib/i18n";
 import { supabase } from "@/integrations/supabase/client";
 import { statusKey } from "@/lib/order-status";
 
-const TITLE = "All orders — MazzadTech";
+const TITLE = "All orders — zaddaM";
 const DESC = "Monitor every order, platform commission, and assign delivery partners.";
 
 export const Route = createFileRoute("/admin/orders")({

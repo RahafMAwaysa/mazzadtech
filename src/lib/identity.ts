@@ -1,7 +1,7 @@
 import type { Role } from "@/lib/session";
 
 /**
- * Identity anonymity rules for MazzadTech.
+ * Identity anonymity rules for zaddaM.
  *
  * Customers and Suppliers must NEVER see each other's real identity
  * (personal name, phone, email, or company contact details).

@@ -11,9 +11,9 @@ import { computeMatch, reasonText } from "@/lib/match";
 
 export const Route = createFileRoute("/requests/$id")({
   head: () => ({ meta: [
-    { title: "Offers for your request — Ateeq" },
+    { title: "Offers for your request — zaddaM" },
     { name: "description", content: "Compare supplier offers ranked by an AI match score for your request." },
-    { property: "og:title", content: "Offers for your request — Ateeq" },
+    { property: "og:title", content: "Offers for your request — zaddaM" },
     { property: "og:description", content: "Compare offers ranked by AI match score, price, warranty and delivery." },
   ] }),
   component: () => <Guard roles={["customer", "admin"]}>{() => <RequestOffers />}</Guard>,
