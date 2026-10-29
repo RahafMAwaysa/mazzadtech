@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { convertToModelMessages, streamText, type UIMessage } from "ai";
 import { createLovableAiGatewayProvider, ASSISTANT_MODEL } from "@/lib/ai-gateway.server";
 
-const SYSTEM_EN = `You are the friendly shopping assistant of zaddaM, a reverse-auction marketplace for electronics
+const SYSTEM_EN = `You are the friendly shopping assistant of dazzaM, a reverse-auction marketplace for electronics
 (laptops, smartphones, smart watches, projectors, cameras, tablets, audio, accessories).
 
 Your job: understand what the customer needs, in plain everyday language, and collect enough detail

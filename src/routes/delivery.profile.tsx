@@ -8,7 +8,7 @@ import { Button, Card, Field, Input, Spinner } from "@/components/ui-kit";
 import { useI18n } from "@/lib/i18n";
 import { supabase } from "@/integrations/supabase/client";
 
-const TITLE = "Delivery company profile — zaddaM";
+const TITLE = "Delivery company profile — dazzaM";
 const DESC = "Manage your delivery company details, coverage city and contact number.";
 
 const CITIES = [

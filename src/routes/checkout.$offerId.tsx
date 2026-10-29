@@ -14,9 +14,9 @@ import { errorMessage } from "@/lib/utils";
 export const Route = createFileRoute("/checkout/$offerId")({
   head: () => ({
     meta: [
-      { title: "Secure checkout — zaddaM" },
+      { title: "Secure checkout — dazzaM" },
       { name: "description", content: "Pay securely for the offer you selected. Funds are protected by the platform." },
-      { property: "og:title", content: "Secure checkout — zaddaM" },
+      { property: "og:title", content: "Secure checkout — dazzaM" },
       { property: "og:description", content: "Complete your purchase with platform-protected payment." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

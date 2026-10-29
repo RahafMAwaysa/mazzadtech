@@ -28,9 +28,9 @@ type OrderRow = { id: string; offer_id: string; request_id: string; status: stri
 export const Route = createFileRoute("/supplier/offers")({
   head: () => ({
     meta: [
-      { title: "My offers — zaddaM" },
+      { title: "My offers — dazzaM" },
       { name: "description", content: "Review the offers you submitted to customer auctions and their status." },
-      { property: "og:title", content: "My offers — zaddaM" },
+      { property: "og:title", content: "My offers — dazzaM" },
       { property: "og:description", content: "Track the status of every offer you have submitted." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

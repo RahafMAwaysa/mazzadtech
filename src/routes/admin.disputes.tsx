@@ -13,9 +13,9 @@ import { errorMessage } from "@/lib/utils";
 export const Route = createFileRoute("/admin/disputes")({
   head: () => ({
     meta: [
-      { title: "Disputes — zaddaM" },
+      { title: "Disputes — dazzaM" },
       { name: "description", content: "Review and resolve customer and supplier disputes." },
-      { property: "og:title", content: "Disputes — zaddaM" },
+      { property: "og:title", content: "Disputes — dazzaM" },
       { property: "og:description", content: "Review and resolve customer and supplier disputes." },
     ],
   }),

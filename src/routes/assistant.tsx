@@ -27,9 +27,9 @@ type RequestDraft = ExtractedRequest & { purposes: string[] };
 
 export const Route = createFileRoute("/assistant")({
   head: () => ({ meta: [
-    { title: "AI shopping assistant — zaddaM" },
+    { title: "AI shopping assistant — dazzaM" },
     { name: "description", content: "Describe the electronics you need in plain words and the assistant turns it into a supplier request." },
-    { property: "og:title", content: "AI shopping assistant — zaddaM" },
+    { property: "og:title", content: "AI shopping assistant — dazzaM" },
     { property: "og:description", content: "Chat naturally and get competing offers from verified suppliers." },
   ] }),
   component: () => <Guard roles={["customer", "admin"]}>{(ctx) => <Assistant userId={ctx.userId} />}</Guard>,
