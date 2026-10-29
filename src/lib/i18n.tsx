@@ -6,7 +6,7 @@ const dict = {
   en: {
     appName: "zaddaM",
     tagline: "The platform understands you — not the other way around.",
-    heroTitle: "Tell us what you need",
+    heroTitle: "Reverse Auction Marketplace",
     heroSub: "Describe the device you want in your own words. Verified suppliers compete to give you the best offer.",
     start: "Start with the assistant",
     howItWorks: "How it works",
