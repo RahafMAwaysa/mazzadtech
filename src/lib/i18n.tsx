@@ -1,3 +1,4 @@
+import type React from "react";
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 
 export type Lang = "en" | "ar";
@@ -547,7 +548,10 @@ export type TKey = keyof (typeof dict)["en"];
 
 type Ctx = { lang: Lang; dir: "ltr" | "rtl"; setLang: (l: Lang) => void; t: (k: TKey) => string };
 
-const LangContext = createContext<Ctx | null>(null);
+// Keep one context instance across hot reloads so editing this file
+// doesn't orphan consumers from the provider.
+const g = globalThis as unknown as { __dazzamLangCtx?: React.Context<Ctx | null> };
+const LangContext = g.__dazzamLangCtx ?? (g.__dazzamLangCtx = createContext<Ctx | null>(null));
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
   const [lang, setLangState] = useState<Lang>("en");
