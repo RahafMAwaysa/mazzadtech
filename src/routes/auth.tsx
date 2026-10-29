@@ -9,8 +9,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { ensureAccount } from "@/lib/account.functions";
 import { errorMessage } from "@/lib/utils";
 
-const TITLE = "Sign in — MazzadTech";
-const DESC = "Sign in or create your MazzadTech customer, supplier or delivery account.";
+const TITLE = "Sign in — zaddaM";
+const DESC = "Sign in or create your zaddaM customer, supplier or delivery account.";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({

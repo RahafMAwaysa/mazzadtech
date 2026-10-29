@@ -8,7 +8,7 @@ import { useI18n } from "@/lib/i18n";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/admin/")({
-  head: () => ({ meta: [{ title: "Admin dashboard — MazzadTech" }, { name: "description", content: "Current platform status and actions requiring admin attention." }] }),
+  head: () => ({ meta: [{ title: "Admin dashboard — zaddaM" }, { name: "description", content: "Current platform status and actions requiring admin attention." }] }),
   component: () => <Guard roles={["admin"]}>{() => <Body />}</Guard>,
 });
 

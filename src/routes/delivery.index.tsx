@@ -9,7 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { statusKey } from "@/lib/order-status";
 import { shortRef } from "@/lib/identity";
 
-const TITLE = "Deliveries — MazzadTech";
+const TITLE = "Deliveries — zaddaM";
 const DESC = "Delivery partners track and update assigned orders without seeing customer identities.";
 
 export const Route = createFileRoute("/delivery/")({

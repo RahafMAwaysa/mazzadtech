@@ -35,9 +35,9 @@ type SupplierReview = {
 export const Route = createFileRoute("/supplier/profile")({
   head: () => ({
     meta: [
-      { title: "Supplier profile — MazzadTech" },
+      { title: "Supplier profile — zaddaM" },
       { name: "description", content: "Manage your company profile, city and the product categories you supply." },
-      { property: "og:title", content: "Supplier profile — MazzadTech" },
+      { property: "og:title", content: "Supplier profile — zaddaM" },
       { property: "og:description", content: "Keep your supplier details and categories up to date." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

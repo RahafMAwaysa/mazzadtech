@@ -11,9 +11,9 @@ import { shortId, timeLeft } from "@/lib/auction";
 export const Route = createFileRoute("/supplier/auctions")({
   head: () => ({
     meta: [
-      { title: "Available auctions — MazzadTech" },
+      { title: "Available auctions — zaddaM" },
       { name: "description", content: "Live customer purchase requests matching your categories, open for offers." },
-      { property: "og:title", content: "Available auctions — MazzadTech" },
+      { property: "og:title", content: "Available auctions — zaddaM" },
       { property: "og:description", content: "Bid on live electronics purchase requests from real customers." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

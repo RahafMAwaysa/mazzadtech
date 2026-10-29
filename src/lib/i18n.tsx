@@ -4,7 +4,7 @@ export type Lang = "en" | "ar";
 
 const dict = {
   en: {
-    appName: "MazzadTech",
+    appName: "zaddaM",
     tagline: "The platform understands you — not the other way around.",
     heroTitle: "Tell us what you need",
     heroSub: "Describe the device you want in your own words. Verified suppliers compete to give you the best offer.",

@@ -16,9 +16,9 @@ import type { Role } from "@/lib/session";
 export const Route = createFileRoute("/orders/$id")({
   head: () => ({
     meta: [
-      { title: "Order tracking — MazzadTech" },
+      { title: "Order tracking — zaddaM" },
       { name: "description", content: "Track your order from confirmation to delivery, step by step." },
-      { property: "og:title", content: "Order tracking — MazzadTech" },
+      { property: "og:title", content: "Order tracking — zaddaM" },
       { property: "og:description", content: "Track your order from confirmation to delivery." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

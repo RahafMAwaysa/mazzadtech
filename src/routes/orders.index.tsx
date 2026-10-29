@@ -11,9 +11,9 @@ import { statusKey } from "@/lib/order-status";
 export const Route = createFileRoute("/orders/")({
   head: () => ({
     meta: [
-      { title: "My orders — Ateeq" },
+      { title: "My orders — zaddaM" },
       { name: "description", content: "Follow every order you placed and its delivery progress." },
-      { property: "og:title", content: "My orders — Ateeq" },
+      { property: "og:title", content: "My orders — zaddaM" },
       { property: "og:description", content: "Follow your orders and delivery progress." },
     ],
   }),
