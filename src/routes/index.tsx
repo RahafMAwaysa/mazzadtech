@@ -8,13 +8,13 @@ import { useSession } from "@/lib/session";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "zaddaM — AI reverse auction for electronics" },
+      { title: "dazzaM — AI reverse auction for electronics" },
       {
         name: "description",
         content:
           "Describe the device you need in your own words and let verified suppliers compete with their best offers on laptops, phones, cameras and more.",
       },
-      { property: "og:title", content: "zaddaM — AI reverse auction for electronics" },
+      { property: "og:title", content: "dazzaM — AI reverse auction for electronics" },
       {
         property: "og:description",
         content: "Describe the device you need in your own words and let verified suppliers compete with their best offers on laptops, phones, cameras and more.",

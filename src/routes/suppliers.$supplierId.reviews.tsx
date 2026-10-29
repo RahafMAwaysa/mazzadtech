@@ -9,7 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 export const Route = createFileRoute("/suppliers/$supplierId/reviews")({
   head: () => ({
     meta: [
-      { title: "Supplier reviews — zaddaM" },
+      { title: "Supplier reviews — dazzaM" },
       { name: "description", content: "Customer reviews for this supplier." },
     ],
   }),

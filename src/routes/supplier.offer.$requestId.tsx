@@ -38,9 +38,9 @@ const emptyTechnicalSpecs: TechnicalSpecs = {
 export const Route = createFileRoute("/supplier/offer/$requestId")({
   head: () => ({
     meta: [
-      { title: "Submit an offer — zaddaM" },
+      { title: "Submit an offer — dazzaM" },
       { name: "description", content: "Send your best product, price, warranty and delivery offer for this request." },
-      { property: "og:title", content: "Submit an offer — zaddaM" },
+      { property: "og:title", content: "Submit an offer — dazzaM" },
       { property: "og:description", content: "Compete for the customer's request with your best offer." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
