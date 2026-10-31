@@ -10,4 +10,5 @@
 <!-- LOVABLE:END -->
 
 ## Rules
+- Google sign-in uses the generated Lovable managed auth helper with a public same-origin callback; handle both redirect and popup completion so editor sign-in works without a page reload.
 - vite.config.ts defines public VITE_SUPABASE_* fallbacks: `.env` is untracked, so the publish build would otherwise ship without the backend connection (blank live site).

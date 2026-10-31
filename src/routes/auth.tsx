@@ -6,6 +6,7 @@ import { AppShell, Page } from "@/components/AppShell";
 import { Button, Card, Field, Input, Spinner } from "@/components/ui-kit";
 import { useI18n } from "@/lib/i18n";
 import { supabase } from "@/integrations/supabase/client";
+import { lovable } from "@/integrations/lovable";
 import { ensureAccount } from "@/lib/account.functions";
 import { errorMessage } from "@/lib/utils";
 
@@ -114,11 +115,30 @@ function AuthPage() {
       );
     }
 
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: { redirectTo: `${window.location.origin}/auth` },
-    });
-    if (error) toast.error(errorMessage(error));
+    setBusy(true);
+    try {
+      const result = await lovable.auth.signInWithOAuth("google", {
+        redirect_uri: `${window.location.origin}/auth`,
+      });
+      if (result.error) throw result.error;
+      if (result.redirected) return;
+
+      // The preview popup returns with the session set instead of reloading.
+      const { data } = await supabase.auth.getSession();
+      if (!data.session) throw new Error("Google sign-in did not complete. Please try again.");
+      const pendingRaw = localStorage.getItem(PENDING_SIGNUP_KEY);
+      if (pendingRaw) {
+        const { error } = await supabase.auth.updateUser({ data: JSON.parse(pendingRaw) });
+        if (error) throw error;
+        localStorage.removeItem(PENDING_SIGNUP_KEY);
+      }
+      const { roles } = await ensureAccount();
+      await navigate({ to: routeForRoles(roles) });
+    } catch (error) {
+      toast.error(errorMessage(error));
+    } finally {
+      setBusy(false);
+    }
   };
 
   const submit = async (e: React.FormEvent) => {
@@ -242,14 +262,16 @@ function AuthPage() {
 
             {!adminMode && (
               <>
-                <button
+                <Button
                   type="button"
+                  variant="outline"
+                  disabled={busy}
                   onClick={() => void googleSignIn()}
-                  className="flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-border bg-card text-sm font-medium"
+                  className="w-full"
                 >
                   <GoogleIcon />
                   Continue with Google
-                </button>
+                </Button>
 
                 <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
                   <span className="h-px flex-1 bg-border" />
